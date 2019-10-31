@@ -20,7 +20,7 @@ class EKFLocEnv(gym.Env):
         Return the current state (exec. trace) as a unique array (stack true, est, time arrays)
         :return: stacked representation of the current state
         """
-        return np.vstack([self.true, self.est, self.time])
+        return np.vstack([self.true[0:2, :], self.est[0:2, :], self.time])
 
     def step(self, action_prefix):
         """
@@ -31,6 +31,10 @@ class EKFLocEnv(gym.Env):
         :param action_prefix: index in [0, len(trace)) in which create the breakpoint
         :return: state, reward, id_done flag, and info
         """
+        if self.is_done:    #avoid to loose a starting good state
+            return self.get_state(), self.reward, self.is_done, {}
+        if action_prefix <= self.last_action:    #avoid to backtrack
+            return self.get_state(), 0, self.is_done, {}
 
         # Compute prefix (unchanged)
         true_prefix = self.true[:, 0:action_prefix] #the index `action_prefix` is excluded
@@ -141,7 +145,7 @@ class System:
         self.time_event = 5.0  # at this time, the system change orientation
 
         self._num_sim_steps = math.ceil((self.SIM_TIME + self.DT) / self.DT + 1)    #+1 for 0 time
-        self._num_obs_vars  = 9  #obs vars: x,y,theta,v of true trajectory, x,y,theta,v of estimated, and time
+        self._num_obs_vars  = 5  #obs vars: x,y of true trajectory, x,y of estimated, and time
 
     def get_number_of_steps(self):
         return self._num_sim_steps
@@ -160,7 +164,7 @@ class System:
         xDR = xTrue
         hxEst = xEst
         hxTrue = xTrue
-        hxDR = xTrue
+
         hxTime = time
         hz = np.zeros((2, 1))
         PEst = np.eye(4)
@@ -282,7 +286,7 @@ class Monitor:
         epsilon = 0.6 -> 9/1000 reach error state
     """
     def __init__(self):
-        self.EPSILON = 0.6          # threshold for error detection (if diff>eps then Error)
+        self.EPSILON = 0.5          # threshold for error detection (if diff>eps then Error)
         self.TRANSIENT_TIME = 3.0   # initial transient time in which the localization is not stable
 
     def sat_property(self, true, est, time):
