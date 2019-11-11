@@ -1,1 +1,2 @@
 from gym_ekf_localization.envs.EKFLocEnv import EKFLocEnv
+from gym_ekf_localization.envs.EKFLocReducedEnv import EKFLocReducedEnv

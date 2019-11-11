@@ -2,7 +2,7 @@ import numpy as np
 import gym
 import gym_ekf_localization
 from keras.models import Sequential
-from keras.layers import Input, Dense, Activation, Flatten
+from keras.layers import Input, Dense, Activation, Flatten, Conv2D, Conv1D, MaxPool2D, MaxPool1D
 from keras.optimizers import Adam
 from keras.callbacks import Callback
 from rl.agents.dqn import DQNAgent
@@ -33,12 +33,16 @@ class EpsDecayCallback(Callback):
 
 def build_model(observation_space_shape, num_actions):
     model = Sequential()
+    # NN
     model.add(Flatten(input_shape=(1,) + observation_space_shape))
-    import ipdb
-    ipdb.set_trace()
     model.add(Dense(128, activation='relu'))
     model.add(Dense(64, activation='relu'))
     model.add(Dense(num_actions, activation='linear'))
+    # CNN
+    #model.add(Conv1D(32, kernel_size=3, activation='relu', input_shape=(5, 102)))
+    #model.add(MaxPool2D((2, 2), strides=2, padding='valid'))
+    #model.add(Flatten())
+    #model.add(Dense(num_actions, activation='linear'))
     print(model.summary())
     return model
 
@@ -102,14 +106,14 @@ def estimate_frequency_via_mc(number_of_observation):
 
 def estimate_frequency_via_agent(number_of_observation, agent, visualize=False):
     env = gym.make(ENV_NAME)
-    MAX_STEPS_X_EP = 10
+    MAX_STEPS_X_EP = 3
     NUM_EPISODES = number_of_observation // MAX_STEPS_X_EP
     score = agent.test(env, nb_episodes=NUM_EPISODES, visualize=visualize, nb_max_episode_steps=MAX_STEPS_X_EP, verbose=1)
     return score
 
 def train_agent(env, agent, callbacks):
     TOT_NUM_STEP = 50000  # overall number of steps in the all training
-    MAX_STEPS_X_EP = 10  # reset episode when `isdone` or after 10 steps
+    MAX_STEPS_X_EP = 3  # reset episode when `isdone` or after 10 steps
     return agent.fit(env, nb_steps=TOT_NUM_STEP, nb_max_episode_steps=MAX_STEPS_X_EP, visualize=False, verbose=2, callbacks=callbacks)
 
 def main():
@@ -137,8 +141,17 @@ def test_mc():
             k = k + 1
     print("Frequency MC: {} / {} = {}".format(k, NUM_OBS, k/NUM_OBS))
 
+def test_second_env_access():
+    v0 = 'ekf-loc-v0'
+    v1 = 'ekf-loc-v1'
+    env0 = gym.make(v0)
+    env1 = gym.make(v1)
+    import ipdb
+    ipdb.set_trace()
+
 if __name__=='__main__':
     #test_environment()
     #test_agent()
     main()
     #test_mc()
+    # test_second_env_access()

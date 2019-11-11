@@ -4,6 +4,137 @@ from gym import spaces
 import matplotlib.pyplot as plt
 import math
 
+#SECOND VERSION WITH OBS SPACE DEFINED BY SINGLE STATE
+class EKFLocReducedEnv(gym.Env):
+    def __init__(self):
+        """ Define the action and observation spaces."""
+        self.sys = System()
+        self.mon = Monitor()
+        DUMMY_ACTION = 1
+        OBS_VARS = 9    #x,y,theta,v for real and approx state and time
+        epsilon = 0.5
+        T0 = 0
+        Tf = 10 + epsilon   #just to be sure
+        self.action_space = spaces.Discrete(DUMMY_ACTION)
+        self.observation_space = spaces.Box(low=np.array([np.NINF, np.NINF, np.NINF, np.NINF, np.NINF, np.NINF, np.NINF, np.NINF, T0]),
+                                            high=np.array([np.Inf, np.Inf, np.Inf, np.Inf, np.Inf, np.Inf, np.Inf, np.Inf, Tf]),
+                                            shape=(OBS_VARS, DUMMY_ACTION), dtype=np.float16)
+
+    def get_state(self):
+        """
+        Return the current state (exec. trace) as a unique array (stack true, est, time arrays)
+        :return: stacked representation of the current state
+        """
+        #import ipdb
+        #ipdb.set_trace()
+        return np.vstack([self.true[0:2, :], self.est[0:2, :], self.time])
+
+    def step(self, action_prefix):
+        """
+        Starting from the current state, create a break-point according to the index `action_prefix`
+        Then re-run the system from that state and update the current state, as merging of:
+            -prefix: current state up to the break-point (exclude break-point)
+            -suffix: new run from the break-point (included) to the time horizon
+        :param action_prefix: index in [0, len(trace)) in which create the breakpoint
+        :return: state, reward, id_done flag, and info
+        """
+        if self.is_done:    #avoid to loose a starting good state
+            return self.get_state(), self.reward, self.is_done, {}
+        if action_prefix <= self.last_action:    #avoid to backtrack
+            return self.get_state(), 0, self.is_done, {}
+
+        # Compute prefix (unchanged)
+        true_prefix = self.true[:, 0:action_prefix] #the index `action_prefix` is excluded
+        est_prefix = self.est[:, 0:action_prefix]
+
+        # State from which start a new run
+        true_state = np.reshape(self.true[:, action_prefix], (4, 1))
+        est_state = np.reshape(self.est[:, action_prefix], (4,1))
+        curr_time = self.time[action_prefix]
+
+        # Merge the two traces
+        true_suffix, est_suffix, time = self.sys.run_system_from_state(true_state, est_state, curr_time)
+        self.true = np.concatenate((true_prefix, true_suffix), axis=1)
+        self.est = np.concatenate((est_prefix, est_suffix), axis=1)
+        # time not changed
+        self.last_action = action_prefix
+
+        # Compute reward in the new trace
+        self.is_done, self.reward, self.error_time = self.mon.sat_property(self.true, self.est, self.time)
+        if self.is_done:
+            self.reward = 10
+
+        return self.get_state(), self.reward, self.is_done, {}
+
+    def reset(self):
+        """
+        Reset the state of the problem, creating a new complete trace.
+        :return: initial state
+        """
+        self.true, self.est, self.time = self.sys.run_system()
+        self.is_done, self.reward, self.error_time = self.mon.sat_property(self.true, self.est, self.time)
+        if self.is_done:
+            self.reward = 10
+        self.last_action = 0
+        return self.get_state()
+
+    def render(self, mode='human'):
+        """
+        Render method to show the current state (execution trace) of the problem.
+        It plots the trajectory of the system: the true trajectory and the belief trajectory.
+        :return: -
+        """
+        ax = plt.gca()
+        ax.cla()
+        ax.plot(self.true[0, :].flatten(),
+                self.true[1, :].flatten(), "-g")  # plot the true trajectory
+        ax.plot(self.est[0, :].flatten(),
+                self.est[1, :].flatten(), "-b")  # plot the estimated (belief) trajectory
+        ax.scatter(self.true[0, self.last_action].flatten(),
+                   self.true[1, self.last_action].flatten(), marker='o')  # mark last break-point (action)
+        ax.scatter(self.est[0, self.last_action].flatten(),
+                   self.est[1, self.last_action].flatten(), marker='o')
+        if self.error_time is not None:
+            true_value_coord = (self.true[0, self.error_time].flatten(), self.true[1, self.error_time].flatten())
+            ax.scatter(self.true[0, self.error_time].flatten(),
+                       self.true[1, self.error_time].flatten(), marker='X')  # mark the first error found
+            ax.scatter(self.est[0, self.error_time].flatten(),
+                       self.est[1, self.error_time].flatten(), marker='X')
+            ax.add_artist(plt.Circle(true_value_coord, color='r', fill=False, radius=0.6))
+
+        ax.axis("equal")
+        ax.grid(True)
+        plt.pause(0.001)
+
+    def holdon_plot(self, mode='human'):
+        """
+        Render method to show the current state (execution trace) of the problem.
+        It plots the trajectory of the system: the true trajectory and the belief trajectory.
+        :return: -
+        """
+        ax = plt.gca()
+        ax.cla()
+        ax.plot(self.true[0, :].flatten(),
+                 self.true[1, :].flatten(), "-g")   # plot the true trajectory
+        ax.plot(self.est[0, :].flatten(),
+                 self.est[1, :].flatten(), "-b")    # plot the estimated (belief) trajectory
+        ax.scatter(self.true[0, self.last_action].flatten(),
+                    self.true[1, self.last_action].flatten(), marker='o')   # mark last break-point (action)
+        ax.scatter(self.est[0, self.last_action].flatten(),
+                    self.est[1, self.last_action].flatten(), marker='o')
+        if self.error_time is not None:
+            true_value_coord = (self.true[0, self.error_time].flatten(), self.true[1, self.error_time].flatten())
+            ax.scatter(self.true[0, self.error_time].flatten(),
+                        self.true[1, self.error_time].flatten(), marker='X')  # mark the first error found
+            ax.scatter(self.est[0, self.error_time].flatten(),
+                        self.est[1, self.error_time].flatten(), marker='X')
+            ax.add_artist(plt.Circle(true_value_coord, color='r', fill=False, radius=0.6))
+
+        ax.axis("equal")
+        ax.grid(True)
+        plt.show()
+
+#FIRST VERSION WITH OBS SPACE DEFINED BY COMPLETE TRACES
 class EKFLocEnv(gym.Env):
     def __init__(self):
         """ Define the action and observation spaces."""
@@ -13,13 +144,15 @@ class EKFLocEnv(gym.Env):
         OBS_VARS = self.sys.get_number_of_observed_vars()
         self.action_space = spaces.Discrete(TRACE_LEN)
         # TODO: find a way to bound the observation space
-        self.observation_space = spaces.Box(low=-np.Inf, high=np.NINF, shape=(OBS_VARS, TRACE_LEN), dtype=np.float16)
+        self.observation_space = spaces.Box(low=np.NINF, high=np.Inf, shape=(OBS_VARS, TRACE_LEN), dtype=np.float16)
 
     def get_state(self):
         """
         Return the current state (exec. trace) as a unique array (stack true, est, time arrays)
         :return: stacked representation of the current state
         """
+        #import ipdb
+        #ipdb.set_trace()
         return np.vstack([self.true[0:2, :], self.est[0:2, :], self.time])
 
     def step(self, action_prefix):
@@ -146,12 +279,16 @@ class System:
 
         self._num_sim_steps = math.ceil((self.SIM_TIME + self.DT) / self.DT + 1)    #+1 for 0 time
         self._num_obs_vars  = 5  #obs vars: x,y of true trajectory, x,y of estimated, and time
+        self._num_all_obs_vars  = 9  #obs vars: x,y,theta,v of true trajectory, x,y,theta,v of estimated, and time
 
     def get_number_of_steps(self):
         return self._num_sim_steps
 
     def get_number_of_observed_vars(self):
         return self._num_obs_vars
+
+    def get_number_of_observed_vars_extended(self):
+        return self._num_all_obs_vars
 
     def run_system(self):
         time = 0.0
@@ -170,12 +307,7 @@ class System:
         PEst = np.eye(4)
 
         while self.SIM_TIME > time:
-            time += self.DT
-            u = self.my_calc_input(time)
-
-            xTrue, z, xDR, ud = self.observation(xTrue, xDR, u)
-
-            xEst, PEst = self.ekf_estimation(xEst, PEst, z, ud)
+            xTrue, xEst, PEst, time = self.step_system(xTrue, xEst, PEst, time)
 
             # store data history
             hxEst = np.hstack((hxEst, xEst))
@@ -184,6 +316,14 @@ class System:
             hz = np.hstack((hz, z))
 
         return hxTrue, hxEst, hxTime
+
+    def step_system(self, xTrue, xEst, PEst, time):
+        time += self.DT
+        u = self.my_calc_input(time)
+        xDR = xTrue # to maintain previous method
+        xTrue, z, xDR, ud = self.observation(xTrue, xDR, u)
+        xEst, PEst = self.ekf_estimation(xEst, PEst, z, ud)
+        return xTrue, xEst, PEst, time
 
     def ekf_estimation(self, xEst, PEst, z, u):
         #  Predict
