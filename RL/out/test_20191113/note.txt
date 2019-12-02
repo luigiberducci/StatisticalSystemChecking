@@ -1,0 +1,2 @@
+using reward defined as 1/rob for rob >=0
+else SUCC_REWARD=1000

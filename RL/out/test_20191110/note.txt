@@ -1,0 +1,3 @@
+First attempt of reward, not yet formalized as in the notes
+MAX_REWARD=+10
+there were also a negative reward when t<=transient_time

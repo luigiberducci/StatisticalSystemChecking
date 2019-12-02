@@ -1,0 +1,2 @@
+Reward defined as formalized on notes
+MAX_REWARD = +10

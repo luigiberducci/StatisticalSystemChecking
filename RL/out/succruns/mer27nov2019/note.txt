@@ -1,0 +1,3 @@
+redifined reward only on terminal state as exp(-rob(trace))
+where rob trace is the minimum robustness reached over the path starting from the associated prefix
+(when a state is resumed, the previous robustness is not considered)

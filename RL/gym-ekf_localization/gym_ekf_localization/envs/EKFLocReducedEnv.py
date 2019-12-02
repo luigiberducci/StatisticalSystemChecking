@@ -30,6 +30,7 @@ class EKFLocReducedEnv(gym.Env):
                                         0.0])                   # time
         self.prefix_list.append(self.original_s0)
         # Init history for rendering
+        self.best_rob_trace = np.Inf
         self.last_init_state = 0    # init state identified by index in trajectory
         self.error_time = None      # index of first state in which error occurred
         self.last_diff = 0          # for get_reward_0_1: give +1 if increase the error, 0 otherwise
@@ -112,6 +113,7 @@ class EKFLocReducedEnv(gym.Env):
         x_true, x_est, p_est, time = self.sample_init_state()
         self.last_diff = 0          # for get_reward_0_1: give +1 if increase the error, 0 otherwise
         self.sys.set_state(x_true, x_est, p_est, time)
+        self.best_rob_trace = np.Inf
         return self.get_state()
 
     def render(self, mode='human'):
@@ -136,7 +138,7 @@ class EKFLocReducedEnv(gym.Env):
                        self.hx_true[1, self.error_time].flatten(), marker='X')  # mark the first error found
             ax.scatter(self.hx_est[0, self.error_time].flatten(),
                        self.hx_est[1, self.error_time].flatten(), marker='X')
-            ax.add_artist(plt.Circle(true_value_coord, color='r', fill=False, radius=0.6))
+            ax.add_artist(plt.Circle(true_value_coord, color='r', fill=False, radius=0.7))
 
         ax.axis("equal")
         ax.grid(True)
@@ -146,32 +148,92 @@ class EKFLocReducedEnv(gym.Env):
         ERR_THRESHOLD = 0.7  # threshold for error detection (if diff>eps then Error)
         TRANSIENT_TIME = 3.0  # initial transient time in which the localization is not stable
         TIME_HORIZON = 10.0  # initial transient time in which the localization is not stable
-        return self.new_positive_reward(ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON)
+        return self.terminal_exp_reward(ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON)
 
-    def new_positive_reward(self, ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON):
+    def terminal_exp_reward(self, ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON):
         """
-        Reward defined on formula p = m>=0 | -p | p or q
-        as follow:
-            reward(m>=0) = eval(m)
-            reward(-p) = -reward(p)
-            reward(p or q) = min(reward(p), reward(q))
-        where eval(m) = m if m>=0, otherwise +inf
+        Reward defined on formula phi = G p, where p = m>=0 | -p | p or q
+        as reward(x) = 0 if x is not terminal, exp(-rob(trace(x,:))) otherwise
+        with rob(trace, phi) = min_{x in trace} rob(x, phi) and rob(x) defined as
+            rob(x, m>=0) = eval(m, x)
+            rob(x, -p) = -rob(x, p)
+            rob(x, p or q) = max(rob(x, p), rob(x, q))
+        where eval(m, x) = m with value(x) instead of x
         :param ERR_THRESHOLD:   threshold for error detection
         :param TRANSIENT_TIME: time when finish the transient phase in which the localization is unstable
         :param TIME_HORIZON: total lenght of trace
         :return: `isdone` if the trace is complete (time or succ), `reward`, eventual `error_time` in which error occurred
         """
-        SUCC_REWARD = +10  # reward for success
-
-        trans_minus_time = 1 / (TRANSIENT_TIME - self.sys.time[0]) if TRANSIENT_TIME - self.sys.time >= 0 else SUCC_REWARD
+        trans_minus_time = (TRANSIENT_TIME - self.sys.time[0])
         location_difference = np.linalg.norm(self.sys.x_true[0:2] - self.sys.x_est[0:2], axis=0)[0]
-        thresh_minus_err = 1/(ERR_THRESHOLD - location_difference) if ERR_THRESHOLD - location_difference >= 0 else SUCC_REWARD
+        thresh_minus_err = ERR_THRESHOLD - location_difference
+        self.best_rob_trace = np.min([self.best_rob_trace, np.max([trans_minus_time, thresh_minus_err])])  #max because rob should be minimized
+
+        # Flag for falsification condition
+        error_found = True if self.sys.time > TRANSIENT_TIME and location_difference > ERR_THRESHOLD else False
+        time_elapsed = True if self.sys.time >= TIME_HORIZON else False
+        error_time = None
+        if self.error_time is None:
+            error_time = None if not error_found else self.hx_true.shape[1]  # Notice: not shape-1 because the errortime is the current (not yet appended)
+        is_done = time_elapsed
+        reward = 0
+        if is_done:
+            reward = np.exp(-self.best_rob_trace)
+        return is_done, reward, error_time
+
+    def new_positive_reward(self, ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON):
+        """
+        Reward defined on formula p = m>=0 | -p | p or q
+        as follow:
+            reward(m>=0) = 1/eval(m)
+            reward(-p) = -reward(p)
+            reward(p or q) = min(reward(p), reward(q))
+        where eval(m) = m if m>0, otherwise +inf
+        :param ERR_THRESHOLD:   threshold for error detection
+        :param TRANSIENT_TIME: time when finish the transient phase in which the localization is unstable
+        :param TIME_HORIZON: total lenght of trace
+        :return: `isdone` if the trace is complete (time or succ), `reward`, eventual `error_time` in which error occurred
+        """
+        SUCC_REWARD = +1000  # reward for success
+
+        trans_minus_time = 1 / ((TRANSIENT_TIME - self.sys.time[
+            0]) / TIME_HORIZON) if TRANSIENT_TIME - self.sys.time >= 0 else SUCC_REWARD
+        location_difference = np.linalg.norm(self.sys.x_true[0:2] - self.sys.x_est[0:2], axis=0)[0]
+        thresh_minus_err = 1 / (
+                    ERR_THRESHOLD - location_difference) if ERR_THRESHOLD - location_difference >= 0 else SUCC_REWARD
         reward = min(trans_minus_time, thresh_minus_err)
 
         # Flag for falsification condition
         error_found = True if self.sys.time > TRANSIENT_TIME and location_difference > ERR_THRESHOLD else False
         time_elapsed = True if self.sys.time > TIME_HORIZON else False
-        error_time = None if not error_found else self.hx_true.shape[1] - 1
+        error_time = None if not error_found else self.hx_true.shape[
+            1]  # Notice: not shape-1 because the errortime is the current (not yet appended)
+        is_done = error_found or time_elapsed
+        return is_done, reward, error_time
+
+    def new_exp_positive_reward(self, ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON):
+        """
+        Reward defined on formula p = m>=0 | -p | p or q
+        as reward(phi) = exp(-rob(phi)) - 1, where rob is
+            rob(m>=0) = exp(-eval(m)) - 1
+            rob(-p) = -rob(p)
+            rob(p or q) = max(rob(p), rob(q))
+        where eval(m) = m
+        :param ERR_THRESHOLD:   threshold for error detection
+        :param TRANSIENT_TIME: time when finish the transient phase in which the localization is unstable
+        :param TIME_HORIZON: total lenght of trace
+        :return: `isdone` if the trace is complete (time or succ), `reward`, eventual `error_time` in which error occurred
+        """
+        trans_minus_time = (TRANSIENT_TIME - self.sys.time[0]) / TIME_HORIZON
+        location_difference = np.linalg.norm(self.sys.x_true[0:2] - self.sys.x_est[0:2], axis=0)[0]
+        thresh_minus_err = ERR_THRESHOLD - location_difference
+        rob_phi = np.max([trans_minus_time, thresh_minus_err])  #max because rob should be minimized
+        reward = np.exp(-rob_phi)
+
+        # Flag for falsification condition
+        error_found = True if self.sys.time > TRANSIENT_TIME and location_difference > ERR_THRESHOLD else False
+        time_elapsed = True if self.sys.time > TIME_HORIZON else False
+        error_time = None if not error_found else self.hx_true.shape[1]  # Notice: not shape-1 because the errortime is the current (not yet appended)
         is_done = error_found or time_elapsed
         return is_done, reward, error_time
 
@@ -183,7 +245,7 @@ class EKFLocReducedEnv(gym.Env):
         # Flag for falsification condition
         error_found = True if self.sys.time > TRANSIENT_TIME and location_differences > ERR_THRESHOLD else False
         time_elapsed = True if self.sys.time > TIME_HORIZON else False
-        error_time = None if not error_found else self.hx_true.shape[1] - 1
+        error_time = None if not error_found else self.hx_true.shape[1]
         is_done = error_found or time_elapsed
         if self.sys.time <= TRANSIENT_TIME :
             reward = -1
@@ -208,7 +270,7 @@ class EKFLocReducedEnv(gym.Env):
         # Flag for falsification condition
         error_found = reward < 0
         time_elapsed = True if self.sys.time > TIME_HORIZON else False
-        error_time = None if not error_found else self.hx_true.shape[1] - 1
+        error_time = None if not error_found else self.hx_true.shape[1]
         is_done = error_found or time_elapsed
         reward = reward if not error_found else ERROR_REWARD
         return is_done, reward, error_time

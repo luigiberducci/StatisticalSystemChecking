@@ -1,0 +1,29 @@
+Model: "sequential_1"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+flatten_1 (Flatten)          (None, 25)                0         
+_________________________________________________________________
+dense_1 (Dense)              (None, 32)                832       
+_________________________________________________________________
+dense_2 (Dense)              (None, 16)                528       
+_________________________________________________________________
+dense_3 (Dense)              (None, 16)                272       
+_________________________________________________________________
+dense_4 (Dense)              (None, 8)                 136       
+_________________________________________________________________
+dense_5 (Dense)              (None, 1)                 9         
+=================================================================
+Total params: 1,777
+Trainable params: 1,777
+Non-trainable params: 0
+_________________________________________________________________
+None
+[Info] Configuration ISplitting
+[Info] Use ISplitting: True
+[Info] Output Dirs: out/localization/mer27nov2019_15_49_27_CET/2, out/localization/mer27nov2019_15_49_27_CET/2/levels, out/localization/mer27nov2019_15_49_27_CET/2/traces
+[Info] Num particles: 100
+[Info] Adaptive Multilevel Splitting: True, delta=0, k=10
+[Info] Fixed Level Splitting: []
+[Info] Start Importance Splitting.
+Training for 100000 steps ...
