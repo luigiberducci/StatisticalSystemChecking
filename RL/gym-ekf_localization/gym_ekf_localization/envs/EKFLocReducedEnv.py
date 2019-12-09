@@ -16,6 +16,11 @@ class EKFLocReducedEnv(gym.Env):
         epsilon = 0.5
         T0 = 0
         Tf = 10 + epsilon   #just to be sure
+        # Safety condition
+        self.ERR_THRESHOLD = 0.7  # threshold for error detection (if diff>eps then Error)
+        self.TRANSIENT_TIME = 3.0  # initial transient time in which the localization is not stable
+        self.TIME_HORIZON = 10.0  # initial transient time in which the localization is not stable
+        # Env definition
         self.action_space = spaces.Discrete(DUMMY_ACTION)
         self.observation_space = spaces.Box(low=np.NINF,
                                             high=np.Inf,
@@ -38,6 +43,10 @@ class EKFLocReducedEnv(gym.Env):
         self.hx_est = self.sys.x_est
         self.hx_time = self.sys.time
         self.hx_p_est = self.sys.p_est.reshape((16, 1))  #flat p_est matrix
+
+    def print_info_config(self):
+        print("[Info] Environment: EKF Localization")
+        print("[Info] Parameters: Error Threshold {}".format(self.ERR_THRESHOLD))
 
     def get_state(self):
         """
@@ -145,10 +154,7 @@ class EKFLocReducedEnv(gym.Env):
         plt.pause(0.001)
 
     def get_reward(self):
-        ERR_THRESHOLD = 0.7  # threshold for error detection (if diff>eps then Error)
-        TRANSIENT_TIME = 3.0  # initial transient time in which the localization is not stable
-        TIME_HORIZON = 10.0  # initial transient time in which the localization is not stable
-        return self.terminal_exp_reward(ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON)
+        return self.terminal_exp_reward(self.ERR_THRESHOLD, self.TRANSIENT_TIME, self.TIME_HORIZON)
 
     def terminal_exp_reward(self, ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON):
         """

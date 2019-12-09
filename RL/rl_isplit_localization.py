@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 import gym_ekf_localization
+from agent.REINFORCE import REINFORCE
 
 import tensorflow as tf
 from keras.models import Sequential
@@ -32,23 +33,24 @@ def build_model(observation_space_shape, num_actions):
 
 def build_agent(observation_space_shape, num_actions):
     # Experience replay
-    WARMUP_STEPS = 1     # Collect the first steps before start experience replay
-    MEM_LIMIT = 2           # Max number of steps to store
-    MEM_WINDOW_LEN = 0      # Experience of lenght 1 (single step)
+    WARMUP_STEPS = 1000     # Collect the first steps before start experience replay
+    MEM_LIMIT = 1000           # Max number of steps to store
+    MEM_WINDOW_LEN = 1      # Experience of lenght 1 (single step)
     # Target network
     TARGET_MODEL_UPD_RATE = 1e-2    # Update target network with this rate
     # Build network, exp. replay and policy
-    #model = build_model(observation_space_shape, num_actions)
     model = build_model(observation_space_shape, num_actions)
-    replay = SequentialMemory(limit=MEM_LIMIT, window_length=MEM_WINDOW_LEN)
+    replay_memory = SequentialMemory(limit=MEM_LIMIT, window_length=MEM_WINDOW_LEN)
     policy = GreedyQPolicy()
 
     # Finally build the agent
     GAMMA = 1
-    dqn = DQNAgent(model=model, gamma=GAMMA, nb_actions=num_actions, memory=replay, nb_steps_warmup=WARMUP_STEPS,
-                   target_model_update=TARGET_MODEL_UPD_RATE, policy=policy)
-    dqn.compile(Adam(lr=1e-3), metrics=['mae'])
-    return dqn
+    #dqn = DQNAgent(model=model, gamma=GAMMA, nb_actions=num_actions, memory=replay, nb_steps_warmup=WARMUP_STEPS,
+    #              target_model_update=TARGET_MODEL_UPD_RATE, policy=policy)
+    # dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+    reinforce = REINFORCE(model, replay_memory, GAMMA, batch_size=1, nb_steps_warmup=WARMUP_STEPS)
+    reinforce.compile(optimizer='sgd', metrics=['mae'])
+    return reinforce
 
 def build_importance_splitting(env, agent, run_ispl=True, outdir='out'):
     return ImportanceSplittingCallback(env, agent, run_ispl=run_ispl, outdir=outdir)

@@ -13,6 +13,7 @@ from rl.memory import SequentialMemory
 from rl.callbacks import ModelIntervalCheckpoint
 
 from ImportanceSplittingCallback import ImportanceSplittingCallback
+from agent.REINFORCE import REINFORCE
 
 import ipdb
 import argparse
@@ -27,7 +28,6 @@ GLOBAL_ENV_NAME='succruns-v1'
 def build_model(observation_space_shape, num_actions):
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + observation_space_shape))
-    #model.add(Dense(32, activation='relu'))
     model.add(Dense(16, activation='relu'))
     model.add(Dense(8, activation='relu'))
     model.add(Dense(num_actions, activation='linear'))
@@ -37,22 +37,23 @@ def build_model(observation_space_shape, num_actions):
 def build_agent(observation_space_shape, num_actions):
     # Experience replay
     WARMUP_STEPS = 500     # Collect the first steps before start experience replay
-    MEM_LIMIT = 5000        # Max number of steps to store
-    MEM_WINDOW_LEN = 1      # Experience of lenght 1 (single step)
+    MEM_LIMIT = 500        # Max number of steps to store
+    MEM_WINDOW_LEN = 1     # Experience of lenght 1 (single step)
     # Target network
     TARGET_MODEL_UPD_RATE = 1e-2    # Update target network with this rate
     # Build network, exp. replay and policy
-    #model = build_model(observation_space_shape, num_actions)
     model = build_model(observation_space_shape, num_actions)
-    replay = SequentialMemory(limit=MEM_LIMIT, window_length=MEM_WINDOW_LEN)
+    replay_memory = SequentialMemory(limit=MEM_LIMIT, window_length=MEM_WINDOW_LEN)
     policy = GreedyQPolicy()
 
     # Finally build the agent
     GAMMA = 1
-    dqn = DQNAgent(model=model, gamma=GAMMA, nb_actions=num_actions, memory=replay, nb_steps_warmup=WARMUP_STEPS,
-                   target_model_update=TARGET_MODEL_UPD_RATE, policy=policy)
-    dqn.compile(Adam(lr=1e-3), metrics=['mae'])
-    return dqn
+    #dqn = DQNAgent(model=model, gamma=GAMMA, nb_actions=num_actions, memory=replay, nb_steps_warmup=WARMUP_STEPS,
+    #               target_model_update=TARGET_MODEL_UPD_RATE, policy=policy)
+    #dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+    reinforce = REINFORCE(model, replay_memory, GAMMA, batch_size=1, nb_steps_warmup=WARMUP_STEPS)
+    reinforce.compile(optimizer='sgd', metrics=['mae'])
+    return reinforce
 
 def build_importance_splitting(env, agent, run_ispl=True, outdir='out/succruns'):
     return ImportanceSplittingCallback(env, agent, run_ispl=run_ispl, outdir=outdir)
@@ -67,7 +68,7 @@ def get_model_checkpoint_callback(outdir, interval):
 def run(ENV_NAME='succruns-v1', NUM_EPISODES=1000, NUM_STEP_X_EPISODE=10, run_ispl=True, outdir='out', save_models=False, save_interval=None):
     search_algo = "Importance Splitting" if run_ispl else "Uniform Random Simulation"
     # Create Environment and Agent
-    env = gym.make(ENV_NAME, P=0.5)
+    env = gym.make(ENV_NAME, P=0.2)
     agent = build_agent(env.observation_space.shape, env.action_space.n)
     # Create callbacks
     imp_spl = build_importance_splitting(env, agent, run_ispl=run_ispl, outdir=outdir)

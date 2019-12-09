@@ -29,8 +29,7 @@ class SuccessRunsEnv(gym.Env):
         self.hx_time = self.sys.t
 
     def print_info_config(self):
-        print("[Info] Configuration Model")
-        print("[Info] Name: Success Runs")
+        print("[Info] Environment: Success Runs")
         print("[Info] Parameters: P(x'|x)={}".format(self.sys.P))
 
     def get_state(self):

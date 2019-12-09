@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class ImportanceSplittingCallback(Callback):
-    def __init__(self, env, agent, num_particles=100, k=10, warmup_skip=50, adaptive_level_splitting=True, delta_level=0, fixed_levels=[], run_ispl=True, outdir='out'):
+    def __init__(self, env, agent, num_particles=100, k=10, warmup_skip=50, delta_level=0, run_ispl=True, outdir='out'):
         self.env = env  #Store the environment for prefix interaction
         self.agent = agent  #Store the agent for later using of the qnet
         self.warmup_episodes = warmup_skip  #iterations to skip to allow the qvalue to have sense in the first states
@@ -22,6 +22,8 @@ class ImportanceSplittingCallback(Callback):
         self.falsification_counter = 0  #no reset
         self.step_by_step_exec = False  # enable input at each new level, reset or falsification
         # Configure ISplit
+        adaptive_level_splitting = True #ALWAYS
+        fixed_levels = []               #STATIC LEVELS DEPRECATED
         assert adaptive_level_splitting is True or len(fixed_levels) > 0    #fixed_level -> not adaptive
         assert delta_level == 0 or adaptive_level_splitting is True         #delta -> adaptive
         assert k <= 0 or adaptive_level_splitting==True                     #k>0 -> adaptive
@@ -50,7 +52,7 @@ class ImportanceSplittingCallback(Callback):
         self.print_info_config()
 
     def print_info_config(self):
-        print("[Info] Configuration ISplitting")
+        print("[Info] ISplitting Configuration")
         print("[Info] Use ISplitting: {}".format(self.use_i_splitting))
         print("[Info] Output Dirs: {}, {}, {}".format(self.outdir, self.level_outdir, self.traces_outdir))
         print("[Info] Num particles: {}".format(self.num_particles))
@@ -77,7 +79,7 @@ class ImportanceSplittingCallback(Callback):
             self.available_indices.append(i)
 
     def on_episode_end(self, episode, logs={}):
-        self.plot_episode()
+        #self.plot_episode()
         if not self.use_i_splitting:        #disable ispl, run only MC+Qlearning (no exploration policy)
             return
         if episode < self.warmup_episodes:

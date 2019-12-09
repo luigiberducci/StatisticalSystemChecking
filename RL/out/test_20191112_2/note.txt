@@ -1,2 +1,0 @@
-Reward defined as in note
-MAX_REWARD=1000
