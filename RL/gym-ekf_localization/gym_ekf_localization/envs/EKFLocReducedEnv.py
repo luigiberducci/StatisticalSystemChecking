@@ -75,8 +75,9 @@ class EKFLocReducedEnv(gym.Env):
         :return: state, reward, id_done flag, and info
         """
         self.sys.step_system()  #Step run ahed
-        self.is_done, self.reward, self.error_time = self.get_reward()
-        #self.is_done, self.reward, self.error_time = self.get_reward_0_1()
+        self.is_done, self.reward, error_time = self.get_reward()
+        if self.error_time is None and error_time is not None:         #Update only once (first state)
+            self.error_time = error_time
         # store data history for rendering
         self.hx_true = np.hstack((self.hx_true, self.sys.x_true))
         self.hx_est = np.hstack((self.hx_est, self.sys.x_est))
@@ -168,7 +169,7 @@ class EKFLocReducedEnv(gym.Env):
         :param ERR_THRESHOLD:   threshold for error detection
         :param TRANSIENT_TIME: time when finish the transient phase in which the localization is unstable
         :param TIME_HORIZON: total lenght of trace
-        :return: `isdone` if the trace is complete (time or succ), `reward`, eventual `error_time` in which error occurred
+        :return: `isdone` if the trace is complete (time or succ), `rewar/FALSd`, eventual `error_time` in which error occurred
         """
         trans_minus_time = (TRANSIENT_TIME - self.sys.time[0])
         location_difference = np.linalg.norm(self.sys.x_true[0:2] - self.sys.x_est[0:2], axis=0)[0]
@@ -185,6 +186,9 @@ class EKFLocReducedEnv(gym.Env):
         reward = 0
         if is_done:
             reward = np.exp(-self.best_rob_trace)
+        if reward>1 and (self.error_time is None and error_time is None):
+            import ipdb
+            ipdb.set_trace()
         return is_done, reward, error_time
 
     def new_positive_reward(self, ERR_THRESHOLD, TRANSIENT_TIME, TIME_HORIZON):

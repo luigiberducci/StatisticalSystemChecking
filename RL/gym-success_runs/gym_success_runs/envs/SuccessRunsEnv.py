@@ -133,7 +133,7 @@ class SuccessRunsEnv(gym.Env):
         :return: `isdone` if the trace is complete (time or succ), `reward`, eventual `error_time` in which error occurred
         """
         zeroepsilon = 0.001     # because the invariant is that x_goal-x>0 -> x_goal-x>=`zeroepsilon`
-        time_diff = TIME_HORIZON - self.sys.t
+        time_diff = TIME_HORIZON - self.sys.t - zeroepsilon
         state_diff = self.sys.GOAL_STATE - self.sys.x - zeroepsilon
         self.best_rob_trace = np.min([self.best_rob_trace, np.max([time_diff, state_diff])])  #max because rob should be minimized
 
@@ -159,7 +159,7 @@ class FSA:
     def __init__(self, P=0.5):
         self.INIT_STATE = 0
         self.GOAL_STATE = 10
-        self.SINK_STATE = -1
+        self.SINK_STATE = -1 
         self.TIME_TO_REACH_GOAL = 10
         self.x = self.INIT_STATE  #state
         self.t = 0  #time

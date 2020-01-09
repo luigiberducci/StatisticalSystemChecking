@@ -1,5 +1,6 @@
 from rl.core import Agent
 import keras.backend as K
+from keras.optimizers import SGD
 import numpy as np
 
 
@@ -17,6 +18,13 @@ class REINFORCE(Agent):
         self.step_counter = 0
         self.compiled = False
         self.stack_trace = []
+
+    def print_config(self, optimizer_name, metrics, loss):
+        print("[Info] AGENT CONFIGURATION")
+        print("Optimizer: {}, Loss: {}, Metrics: {}".format(optimizer_name, loss, metrics))
+        print("Memory Config: {}".format(self.memory.get_config()))
+        print("Warmup steps: {}".format(self.nb_steps_warmup))
+        print()
 
     def process_state_batch(self, batch):
         input_shape = (self.batch_size,) + self.model.input_shape[1:]
@@ -72,11 +80,17 @@ class REINFORCE(Agent):
                 #print("REWARD = {} | SAMPLE = {}".format(reward, target_batch[0]))
                 self.model.train_on_batch(state_batch, target_batch)
 
-    def compile(self, optimizer, metrics=[]):
+    def compile(self, optimizer_name, metrics=[]):
         metrics += [mean_q]
-        self.model.compile(optimizer=optimizer, metrics=metrics, loss='mse')
+        loss = 'mse'
+        optimizer = optimizer_name
+        if optimizer_name == 'sgd':
+            optimizer = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+        elif optimizer_name == 'sgdnestmom':
+            optimizer = SGD(learning_rate=0.01, momentum=0.5, nesterov=True)
+        self.model.compile(optimizer=optimizer, metrics=metrics, loss=loss)
         self.compiled = True
-        print(self.model.summary())
+        self.print_config(optimizer_name, metrics, loss)
 
     def load_weights(self, filepath):
         self.model.load_weights(filepath)

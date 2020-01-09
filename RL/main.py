@@ -6,7 +6,7 @@ from isplit.isplit_factory import ISFactory
 
 def main():
     parser = Parser()
-    problem_params, env_params, agent_params, split_params = parser.parse_args()
+    problem_params, env_params, model_params, agent_params, split_params = parser.parse_args()
     problem_name = problem_params['problem_name']
     run_is_flag = problem_params['run_is_flag']
     save_interval = problem_params['save_interval']
@@ -14,7 +14,7 @@ def main():
     print("Problem name: {}".format(problem_name))
     # Env, Model, Agent
     env = build_env(problem_name, env_params)
-    model = build_model(problem_name, env.observation_space.shape, env.action_space.n)
+    model = build_model(problem_name, env.observation_space.shape, env.action_space.n, model_params)
     agent = build_agent(problem_name, model, agent_params)
     # Search
     split_manager = ISFactory(env, agent, outdir, save_interval, run_is_flag, split_params)
@@ -34,9 +34,9 @@ def build_env(problem_name, env_params):
     env_manager.print_config()
     return env
 
-def build_model(problem_name, observation_shape, num_actions):
+def build_model(problem_name, observation_shape, num_actions, model_params):
     # Model
-    model_manager = ModelFactory(problem_name, observation_shape, num_actions)
+    model_manager = ModelFactory(problem_name, observation_shape, num_actions, model_params)
     model = model_manager.get_model()
     return model
 
@@ -44,7 +44,6 @@ def build_agent(problem_name, model, agent_params):
     # Agent
     agent_manager = AgentFactory(problem_name, model, agent_params)
     agent = agent_manager.get_compiled_agent()
-    print(agent)
     return agent
 
 if __name__=='__main__':

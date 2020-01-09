@@ -48,15 +48,17 @@ class AgentFactory:
         params['mem_limit'] = 500
         params['mem_window_len'] = 1
         params['gamma'] = 1
-        params['warmup_steps'] = 500
+        params['warmup_steps'] = params['mem_limit']
         params['batch_size'] = 1
+        params['hidden_activation'] = 'relu'
+        params['last_activation'] = 'linear'
         params['optimizer'] = 'sgd'
         params['metrics'] = ['mae']
         return params
 
     def update_params(self, params):
         param_names = ['mem_limit', 'mem_window_len', 'gamma',
-                       'warmup_steps', 'batch_size', 'optimizer', 'metrics']
+                       'warmup_steps', 'batch_size', 'hidden_activation', 'last_activation', 'optimizer', 'metrics']
         for name in param_names:
             if name in params.keys():
                 self.agent_params[name] = params[name]
@@ -64,6 +66,6 @@ class AgentFactory:
     def get_compiled_agent(self):
         assert 'optimizer' in self.agent_params.keys()
         assert 'metrics' in self.agent_params.keys()
-        self.agent.compile(optimizer=self.agent_params['optimizer'],
+        self.agent.compile(optimizer_name=self.agent_params['optimizer'],
                            metrics=self.agent_params['metrics'])
         return self.agent

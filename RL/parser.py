@@ -17,19 +17,22 @@ class Parser:
                             help='Interval (in # simsteps) in which save model')
         parser.add_argument('--envparams', default=[], nargs='*', type=str,
                             help='Environment parameters as list of strings (e.g. P in SR)')
+        parser.add_argument('--modelparams', default=[], nargs='*', type=str,
+                            help='Model (NN) parameters as list of strings (hidden layer activation, last layer activation)')
         parser.add_argument('--agentparams', default=[], nargs='*', type=str,
                             help='Agent parameters as list of strings (mem_limit, mem_window_len, warmup_steps, gamma, optimizer, metrics)')
         parser.add_argument('--splitparams', default=[], nargs='*', type=str,
-                            help='Importance Splitting parameters as list of strings (num_particles, k_particles, warmup_steps, delta_level)')
+                            help='Importance Splitting parameters as list of strings (num_particles, k_particles, warmup_particles, delta_level)')
         return parser
 
     def parse_args(self):
         args = self.parser.parse_args()
         problem_params = self.parse_problem_params(args)
         env_params = self.parse_env_params(problem_params['problem_name'], args)
+        model_params = self.parse_model_params(args)
         agent_params = self.parse_agent_params(args)
         split_params = self.parse_split_params(args)
-        return problem_params, env_params, agent_params, split_params
+        return problem_params, env_params, model_params, agent_params, split_params
 
     def parse_problem_params(self, args):
         prob_params = dict()
@@ -57,6 +60,20 @@ class Parser:
                 split_params['delta_level'] = str(args.splitparams[4])
         return split_params
 
+    def parse_model_params(self, args):
+        # RULE: if 0 params -> default, otherwise always 6 agent parameters:
+        # Order is IMPORTANT: hidden layer activation function, last layer activation function
+        # If you want ot use a default value, set that parameter as -1
+        assert len(args.modelparams) == 0 or len(args.modelparams) == 3
+        model_params = dict()
+        if len(args.modelparams) > 0:
+            if not args.modelparams[0] == '-1':  # hidden initializer
+                model_params['hidden_initializer'] = args.modelparams[0]
+            if not args.modelparams[1] == '-1':  # hidden activation
+                model_params['hidden_activation'] = args.modelparams[1]
+            if not args.modelparams[2] == '-1':  # last activation
+                model_params['last_activation'] = args.modelparams[2]
+        return model_params
 
     def parse_agent_params(self, args):
         # RULE: if 0 params -> default, otherwise always 6 agent parameters:
@@ -74,8 +91,9 @@ class Parser:
                 agent_params['warmup_steps'] = int(args.agentparams[2])
             if not args.agentparams[3] == '-1':  # gamma
                 agent_params['gamma'] = float(args.agentparams[3])
-            if not args.agentparams[4] == '-1':  # optimizer
-                agent_params['optimizer'] = str(args.agentparams[4])
+            if not args.agentparams[4] == '-1':  # metrics
+                # note: metrics must be the last because is a list of values
+                agent_params['optimizer'] = args.agentparams[4]
             if not args.agentparams[5] == '-1':  # metrics
                 # note: metrics must be the last because is a list of values
                 agent_params['metrics'] = args.agentparams[5:]

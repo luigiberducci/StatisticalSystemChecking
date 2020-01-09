@@ -14,10 +14,13 @@ class ImportanceSplittingCallback(Callback):
         self.outdir = outdir #output directory for logging
         self.level_outdir = os.path.join(outdir, "levels")
         self.traces_outdir = os.path.join(outdir, "traces")
+        self.models_outdir = os.path.join(outdir, "models")
         if not os.path.exists(self.level_outdir):   #Create if necessary
             os.makedirs(self.level_outdir, exist_ok=True)
         if not os.path.exists(self.traces_outdir):
             os.makedirs(self.traces_outdir, exist_ok=True)
+        if not os.path.exists(self.models_outdir):
+            os.makedirs(self.models_outdir, exist_ok=True)
         # Debug options
         self.falsification_counter = 0  #no reset
         self.step_by_step_exec = False  # enable input at each new level, reset or falsification
@@ -52,12 +55,13 @@ class ImportanceSplittingCallback(Callback):
         self.print_info_config()
 
     def print_info_config(self):
-        print("[Info] ISplitting Configuration")
-        print("[Info] Use ISplitting: {}".format(self.use_i_splitting))
-        print("[Info] Output Dirs: {}, {}, {}".format(self.outdir, self.level_outdir, self.traces_outdir))
-        print("[Info] Num particles: {}".format(self.num_particles))
-        print("[Info] Adaptive Multilevel Splitting: {}, delta={}, k={}".format(self.adaptive_level_splitting, self.delta_level, self.k_best_level))
-        print("[Info] Fixed Level Splitting: {}".format(str(self.fixed_level)))
+        print("[Info] ISPLITTING CONFIGURATION")
+        print("Use ISplitting: {}".format(self.use_i_splitting))
+        print("Output Dirs: {}, {}, {}".format(self.outdir, self.level_outdir, self.traces_outdir))
+        print("Num particles: {}".format(self.num_particles))
+        print("Adaptive Multilevel Splitting: {}, delta={}, k={}".format(self.adaptive_level_splitting, self.delta_level, self.k_best_level))
+        print("Fixed Level Splitting: {}".format(str(self.fixed_level)))
+        print()
 
     def reset_importance_splitting(self):
         # Reset env prefix from the original one
@@ -80,16 +84,20 @@ class ImportanceSplittingCallback(Callback):
 
     def on_episode_end(self, episode, logs={}):
         #self.plot_episode()
+        if self.env.is_current_trace_false():  # Error found
+            print("[Info] FALSIFICATION!")
+            self.falsification_counter = self.falsification_counter + 1
         if not self.use_i_splitting:        #disable ispl, run only MC+Qlearning (no exploration policy)
             return
+        if episode == 0:                    #Save weights at the beginning
+            fp = os.path.join(self.models_outdir, 'weights.0.hdf5')
+            self.agent.save_weights(fp)
         if episode < self.warmup_episodes:
             return
 
         if self.available_indices:              # Not empty
             last_i = self.store_current_trace()
             if self.env.is_current_trace_false():   # Error found
-                print("[Info] FALSIFICATION!")
-                self.falsification_counter = self.falsification_counter + 1
                 self.exist_falsification = True
                 self.trace_ids_falsification.append(last_i)
                 self.plot_episode()
@@ -200,7 +208,7 @@ class ImportanceSplittingCallback(Callback):
         if self.adaptive_level_splitting is True:
             np_s_omega = np.array(self.s_omega[:])
             # TODO IF >LEVEL+DELTA, ALSO <K PARTICLES
-            filter_s_omega = np_s_omega[np.nonzero(np_s_omega >= self.level + self.delta_level)]  # Delta>0 solves Zeno Effect
+            filter_s_omega = np_s_omega[np.nonzero(np_s_omega > self.level + self.delta_level)]  # Delta>0 solves Zeno Effect
             if filter_s_omega.size < self.k_best_level:  # if not found K promising traces
                 return False, self.level  # not found next level, current level
             index = np.argsort(filter_s_omega)[-self.k_best_level]  # take exactly the k-th higher score
