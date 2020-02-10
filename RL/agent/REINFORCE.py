@@ -2,6 +2,7 @@ from rl.core import Agent
 import keras.backend as K
 from keras.optimizers import SGD
 import numpy as np
+import collections
 
 
 def mean_q(y_true, y_pred):
@@ -17,7 +18,7 @@ class REINFORCE(Agent):
         self.nb_steps_warmup = nb_steps_warmup
         self.step_counter = 0
         self.compiled = False
-        self.stack_trace = []
+        self.stack_trace = collections.deque()
 
     def print_config(self, optimizer_name, metrics, loss):
         print("[Info] AGENT CONFIGURATION")
@@ -69,10 +70,9 @@ class REINFORCE(Agent):
         if not terminal:
             return
         while self.stack_trace:
-            observation = self.stack_trace.pop()
-            self.memory.append(observation, None, reward, terminal) #action is None
+            observation = self.stack_trace.popleft()
+            self.memory.append(observation, None, reward, False) #action is None, terminal never used
             self.step_counter = self.step_counter + 1
-            terminal = False    # terminal is true only for the first iteration (last state in queue)
             if self.step_counter >= self.nb_steps_warmup:
                 experience = self.memory.sample(1)[0]
                 state_batch = self.process_state_batch(experience.state0[0])    #exp.state0 is list

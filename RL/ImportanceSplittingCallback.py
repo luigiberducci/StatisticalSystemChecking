@@ -83,7 +83,7 @@ class ImportanceSplittingCallback(Callback):
             self.available_indices.append(i)
 
     def on_episode_end(self, episode, logs={}):
-        #self.plot_episode()
+        # self.plot_episode()
         if self.env.is_current_trace_false():  # Error found
             print("[Info] FALSIFICATION!")
             self.falsification_counter = self.falsification_counter + 1
@@ -184,6 +184,7 @@ class ImportanceSplittingCallback(Callback):
         """
         trace = self.omega[trace_id]
         q_trace = np.apply_along_axis(func1d=self.q_eval_state, axis=0, arr=trace)
+        q_trace = q_trace - q_trace[0]  #differnece with baseline
         return np.expand_dims(q_trace, axis=0), np.max(q_trace)     # q_trace of shape (1,|T|) for consistency with other structs
 
     def q_eval_state(self, state):

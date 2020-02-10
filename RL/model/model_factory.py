@@ -50,7 +50,7 @@ class ModelFactory:
     def get_default_params_SR(self):
         params = dict()
         params['hidden_initializer'] = 'glorot_uniform'
-        params['hidden_activation'] = 'relu'
+        params['hidden_activation'] = 'leakyrelu'
         params['last_activation'] = 'linear'
         return params
 

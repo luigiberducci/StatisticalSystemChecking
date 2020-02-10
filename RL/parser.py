@@ -57,7 +57,7 @@ class Parser:
             if not args.splitparams[2] == '-1':  # warmup steps
                 split_params['warmup_steps'] = int(args.splitparams[2])
             if not args.splitparams[3] == '-1':  # delta level
-                split_params['delta_level'] = str(args.splitparams[4])
+                split_params['delta_level'] = float(args.splitparams[3])
         return split_params
 
     def parse_model_params(self, args):
@@ -105,6 +105,7 @@ class Parser:
         try:
             if problem_name == 'EKF':
                 episode_step = 100
+                env_params['err_threshold'] = float(args.envparams[0]) if len(args.envparams) > 0 else 0.7  # in EKF, err_threshold is the error threshold
             elif problem_name == 'SR':
                 episode_step = 10
                 env_params['P'] = float(args.envparams[0]) if len(args.envparams) > 0 else 0.5  # in SR, P is P(x_i+1 | x_i)

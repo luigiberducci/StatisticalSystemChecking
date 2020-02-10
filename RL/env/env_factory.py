@@ -18,7 +18,7 @@ class EnvFactory:
         assert self.problem_name in ['EKF', 'SR']
         if self.problem_name == 'EKF':
             env_name = 'ekf-loc-v1'
-            return gym.make(env_name)
+            return gym.make(env_name, err_threshold=self.err_threshold)
         elif self.problem_name == 'SR':
             env_name = 'succruns-v1'
             return gym.make(env_name, P=self.P)
@@ -26,6 +26,7 @@ class EnvFactory:
     def parse_params(self, params):
         if self.problem_name == 'EKF':
             self.episode_steps = params['episode_steps']
+            self.err_threshold= params['err_threshold']
         elif self.problem_name == 'SR':
             self.episode_steps = params['episode_steps']
             self.P = params['P']

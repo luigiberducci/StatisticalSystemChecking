@@ -8,7 +8,7 @@ import random as rand
 
 #SECOND VERSION WITH OBS SPACE DEFINED BY SINGLE STATE
 class EKFLocReducedEnv(gym.Env):
-    def __init__(self):
+    def __init__(self, err_threshold=0.7):
         """ Define the action and observation spaces."""
         self.sys = System()
         DUMMY_ACTION = 1
@@ -17,7 +17,7 @@ class EKFLocReducedEnv(gym.Env):
         T0 = 0
         Tf = 10 + epsilon   #just to be sure
         # Safety condition
-        self.ERR_THRESHOLD = 0.7  # threshold for error detection (if diff>eps then Error)
+        self.ERR_THRESHOLD = err_threshold  # threshold for error detection (if diff>eps then Error)
         self.TRANSIENT_TIME = 3.0  # initial transient time in which the localization is not stable
         self.TIME_HORIZON = 10.0  # initial transient time in which the localization is not stable
         # Env definition
