@@ -188,13 +188,13 @@ def main():
         multi_test(problem_name, out_prefix=out_pref, render=args.render)
 
 def multi_test(problem_name, out_prefix="", render=False):
-    num_repeat = 4
+    num_repeat = 5
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
-    max_steps = [1500000]
+    max_steps = [1000000]
     # max_steps = [100000]  #SR
-    ns = [150]
+    ns = [100]
     # ns = [200]              #SR
     ks = [10]
     deltas = [0.0]

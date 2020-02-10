@@ -1,7 +1,0 @@
-README.md
-setup.py
-gym_ekf_localization.egg-info/PKG-INFO
-gym_ekf_localization.egg-info/SOURCES.txt
-gym_ekf_localization.egg-info/dependency_links.txt
-gym_ekf_localization.egg-info/requires.txt
-gym_ekf_localization.egg-info/top_level.txt

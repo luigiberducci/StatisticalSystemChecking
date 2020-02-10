@@ -79,8 +79,8 @@ class RLISAgent:
         # Exploratory phase (estimation of mean rob for Robustness scaling)
         # Note: since there is NO learning, I don't count these steps
         eps, delt = 0.1, 0.01   # (e,d)-approx of mean rob
-        avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
-        sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
+        # avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
+        # sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
         # Training loop
         print("[Info] Train (ISplit) Configuration")
         print("[Info] Num steps: {}".format(max_sim_steps))
@@ -265,7 +265,7 @@ class RLISAgent:
 
                 # Learning phase (if enabled)
                 if learning:
-                    for i in range(sys.last_init_state, reward_arr.shape[0]):  # reward for all states
+                    for i in range(reward_arr.shape[0]):  # reward for all states
                         terminal = (i == trace.shape[1] - 1)    # note: never used
                         observation = trace[self.model.state_filter, i]   # state i filtered (only meaningful variables)
                         reward_i = reward_arr[i]    # reward of state i
