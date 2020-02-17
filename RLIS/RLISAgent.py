@@ -14,7 +14,7 @@ class RLISAgent:
     Implementation of RLIS (RL+ImpSplit) agent
     for Statistical System Checking based on Deep Reinforcement Learning.
     """
-    def __init__(self, model, memory, mem_warmup_steps, opt="sgd", lr=0.01, opt_params=[], loss_name="mse", level_dir="out", trace_dir="out", model_dir="out"):
+    def __init__(self, model_manager, model, memory, mem_warmup_steps, opt="sgd", lr=0.01, opt_params=[], loss_name="mse", level_dir="out", trace_dir="out", model_dir="out"):
         self.trace_dir = trace_dir
         self.level_dir = level_dir
         self.model_dir = model_dir
@@ -24,6 +24,7 @@ class RLISAgent:
         self.opt_params = opt_params
         self.loss_name = loss_name
         self.replay_memory = memory
+        self.model_manager = model_manager
         self.model = model
         self.model.compile(optimizer=self.optimizer(), loss=[self.loss()])
         self.template_ed_phase_start = "[Info] Start Mean Robustness estimation. Eps: {}, Delta: {}, N: {}"
@@ -52,14 +53,13 @@ class RLISAgent:
         return self.opt_name
 
     def loss(self):
-        if self.loss_name == "mse":
-            return MSE()
         return self.loss_name
 
     def save_weights(self, step_counter=0, print_info=True):
         info_template = "[Info] Saved weights: step: {}, file: {}"
         weights_filename = os.path.join(self.model_dir, "weights_{}.h5".format(step_counter))
-        self.model.save_weights(weights_filename)
+        #self.model.save_weights(weights_filename)     # seems there is a bug in keras save_weights
+        self.model.save(weights_filename)
         if print_info:
             print(info_template.format(step_counter, weights_filename))
 
@@ -79,8 +79,8 @@ class RLISAgent:
         # Exploratory phase (estimation of mean rob for Robustness scaling)
         # Note: since there is NO learning, I don't count these steps
         eps, delt = 0.1, 0.01   # (e,d)-approx of mean rob
-        # avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
-        # sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
+        avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
+        sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
         # Training loop
         print("[Info] Train (ISplit) Configuration")
         print("[Info] Num steps: {}".format(max_sim_steps))
@@ -111,7 +111,7 @@ class RLISAgent:
                                                                                                                 render=render)
                 # Update num particles adaptively to avoid undersampling
                 num_particles = min(max_num_particles, num_particles + particles_inc)
-                print(self.template_inc_parts.format(num_particles))
+                #print(self.template_inc_parts.format(num_particles))
         # Save model weights at the end
         self.save_weights(step_counter)
         return prob_list, falsification_counter, first_fals_occurrence
@@ -182,7 +182,7 @@ class RLISAgent:
                         observation = trace[:, i]
                         self.replay_memory.append(observation, None, reward_arr[i], terminal)  # action is None
                         if step_counter >= self.mem_warmup_steps:  # Learning step
-                            experience = self.replay_memory.sample(self.model.batch_size)
+                            experience = self.replay_memory.sample(self.model_manager.batch_size)
                             batch_state = np.array([exp.state0[0][0:self.model.state_variables] for exp in experience])
                             batch_reward = np.array([exp.reward for exp in experience])
                             self.model.train_on_batch(batch_state, batch_reward)
@@ -261,32 +261,32 @@ class RLISAgent:
                     log_info = "Episode {}, Steps {} - Reward {}".format(episode_counter, step_counter, reward)
                     print("[Info] FALSIFICATION! {}".format(log_info))
                     name_prefix = "falsification_{}_{}".format(episode_counter, falsification_counter)
-                    sys.render(title=log_info, save_fig=True, prefix=name_prefix, out_dir=self.trace_dir)
+                    # save figure only during training
+                    sys.render(title=log_info, save_fig=learning, prefix=name_prefix, out_dir=self.trace_dir)
 
                 # Learning phase (if enabled)
                 if learning:
                     for i in range(reward_arr.shape[0]):  # reward for all states
                         terminal = (i == trace.shape[1] - 1)    # note: never used
-                        observation = trace[self.model.state_filter, i]   # state i filtered (only meaningful variables)
+                        observation = trace[self.model_manager.state_filter, i]   # state i filtered (only meaningful variables)
                         reward_i = reward_arr[i]    # reward of state i
                         self.replay_memory.append(observation, None, reward_i, terminal)  # action is None
                         if step_counter >= self.mem_warmup_steps:  # Learning step
-                            experience = self.replay_memory.sample(self.model.batch_size)
+                            experience = self.replay_memory.sample(self.model_manager.batch_size)
                             batch_state = np.array([exp.state0[0] for exp in experience])
                             batch_reward = np.array([exp.reward for exp in experience])
                             self.model.train_on_batch(batch_state, batch_reward)
-                # Save model weights
-                if step_counter > next_breakpoint_weights:
-                    self.save_weights(step_counter)
-                    next_breakpoint_weights = step_counter + save_weights_interval
+                    # Save model weights (only during training)
+                    if step_counter > next_breakpoint_weights:
+                        self.save_weights(step_counter)
+                        next_breakpoint_weights = step_counter + save_weights_interval
                 # Log info
                 text = self.template_episode.format(step_counter, max_sim_step, episode_counter, level_counter, id,
                                                     episode_steps, reward, sys.robustness, reward_arr.shape[0])
                 print(text)
-                print("[Info] Max reward at: {}".format(sys.i_max_reward))
 
             if falsification_counter > 0:   # Error found
-                error_prob = self.falsification_procedure(level_list, level_prob_list, omega, trace_ids_falsification)
+                error_prob = self.falsification_procedure(level_list, level_prob_list, omega, trace_ids_falsification, learning)
                 break
             elif step_counter >= max_sim_step: # end procedure
                 # no message, simply end
@@ -314,9 +314,10 @@ class RLISAgent:
             # Split traces and compute conditional probability
             bool_split = s_omega >= level  # which particles reached the level
             num_prom_traces = np.count_nonzero(s_omega >= level)    # count particles which reached the level
-            level_prob_list.append(num_prom_traces / num_particles)  # Compute prob as avg
             # Update prefixes for next iteration
             prefix_list, available_indices = self.update_prefix_list_with_new_level_prefixes(omega, q_omega, bool_split, level)
+            # Append new level probability
+            level_prob_list.append(num_prom_traces / num_particles)  # Compute prob as avg
             print("[Info] Len prefix list: {}".format(len(prefix_list)))
             if len(prefix_list) == 0:   # no breakpoints, probably qvalues>=level only in last states
                 print("[Info] Prefix list empty. Reset.".format(len(prefix_list)))
@@ -331,7 +332,7 @@ class RLISAgent:
         sys.run_system()
         return sys.get_trace(), sys.reward, sys.reward_array, sys.last_init_state, sys.i_max_reward, sys.is_current_trace_false()
 
-    def falsification_procedure(self, level_list, level_prob_list, omega, trace_ids_falsification):
+    def falsification_procedure(self, level_list, level_prob_list, omega, trace_ids_falsification, learning=True):
         """
         Ending procedure in which the probability of falsification is computed, according to the cond. prob. of levels.
         :return: -
@@ -350,7 +351,7 @@ class RLISAgent:
         level_prob_list.append(k_falsifications / (num_particles))  # Compute prob as avg
         error_prob = np.prod(level_prob_list)
         # Plot and print
-        self.plot_score(s_omega, level_list, trace_ids_falsification, clear_flag=True, highlight_last=True)
+        self.plot_score(s_omega, level_list, trace_ids_falsification, clear_flag=True, highlight_last=True, save_fig=learning)
         print("[Info] Complete ISplit Iteration")
         print("[Info] Levels: " + str(level_list))
         print("[Info] Cond. Prob: " + str(level_prob_list))
@@ -385,7 +386,7 @@ class RLISAgent:
         :param trace_id: identifier of the trace
         :return: QTrace and Score
         """
-        trace = tf.data.Dataset.from_tensor_slices(np.swapaxes(trace[self.model.state_filter], 0, 1)).batch(self.model.batch_size)
+        trace = tf.data.Dataset.from_tensor_slices(np.swapaxes(trace[self.model_manager.state_filter], 0, 1)).batch(self.model_manager.batch_size)
         for i, batch_state in enumerate(trace):
             batch_state = batch_state.numpy()
             if i == 0:

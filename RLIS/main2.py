@@ -66,15 +66,19 @@ def get_default_model_configuration():
     return batch_size, hidden_init, hidden_activation, out_activation
 
 def get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation):
+    model_manager = None
     if problem_name == 'EKF':
-        model = EKFModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = EKFModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model = model_manager.get_model()
     elif problem_name == 'SR':
-        model = SRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = SRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model = model_manager.get_model()
     elif problem_name == 'TR':
-        model = TRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = TRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model = model_manager.get_model()
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
-    return model
+    return model_manager, model
 
 def get_default_training_params(problem_name):
     if problem_name == 'EKF':
@@ -145,12 +149,12 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     # Initialization
     sys = get_default_sys(problem_name)
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
-    model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation)
-    agent = RLISAgent(model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss,
+    model_manager, model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation)
+    agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss,
                       level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
     # Log info
     sys.print_config()
-    model.print_config()
+    model_manager.print_config()
     agent.print_config()
     # Training
     training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta=0.0, render=render)
@@ -193,17 +197,19 @@ def multi_test(problem_name, out_prefix="", render=False):
     losses = ["mse"]
     lrs = [0.01]
     max_steps = [1000000]
-    # max_steps = [100000]  #SR
+    #max_steps = [100000]  #SR
     ns = [100]
-    # ns = [200]              #SR
+    #ns = [300]              #SR
     ks = [10]
     deltas = [0.0]
-    inits = ["glorot_normal"]
+    inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
-    mem_limits = [200000]    #SR
-    mem_wups = [1000]        #SR
-    batch_szs = [8]
+    mem_limits = [50000]
+    mem_wups = [1000]
+    #mem_limits = [10000]    #SR
+    #mem_wups = [500]        #SR
+    batch_szs = [16]
 
     # default params
     enable_test_flag = False

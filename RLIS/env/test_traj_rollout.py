@@ -1,10 +1,12 @@
 from TR import TRSystem as System
+from TR2 import TRSystem as System2
 from timeit import default_timer as timer
 
 template_run = "[system] complete run: episode: {}, end condition: {}, reward: {}"
 template_log = "[log] episode: {}/{}, collisions: {}, elapsed time: {}"
 
-sys = System()
+# sys = System()
+sys = System2()
 start = timer()
 collision_counter = 0
 num_sims = 100

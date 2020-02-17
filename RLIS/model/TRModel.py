@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Flatten, LeakyReLU, PReLU, Activation
+from tensorflow.keras.models import Sequential
 from tensorflow.keras import Model
 import numpy as np
 
@@ -9,7 +10,7 @@ class TRModel(Model):
         super(TRModel, self).__init__()
         # State representation
         self.state_variables = 27   # x, y, theta, v, xx, yy, ttheta, vv, cov4x4flat, time, realv, realu
-        self.state_filter = [True] * self.state_variables
+        self.state_filter = [False] * self.state_variables
         self.state_filter[0] = self.state_filter[1] = self.state_filter[2] = True  # x, y, theta
         self.state_filter[4] = self.state_filter[5] = self.state_filter[6] = True  # x', y', theta'
         self.state_filter[24] = self.state_filter[26] = True  # time, input u
@@ -20,11 +21,15 @@ class TRModel(Model):
         self.hidden_act = hiddent_activation
         self.last_act = last_activation
         # Model architecture
-        self.d1 = Dense(128, input_dim=(self.batch_size, self.input_state_vars),
-                        kernel_initializer=self.hidden_init, activation=self.get_activation(self.hidden_act))
-        self.d2 = Dense(64, kernel_initializer=self.hidden_init, activation=self.get_activation(self.hidden_act))
-        self.d3 = Dense(16, kernel_initializer=self.hidden_init, activation=self.get_activation(self.hidden_act))
-        self.out = Dense(1, activation=self.get_activation(self.last_act))
+        self.model = Sequential()
+        self.model.add(Dense(128, input_shape=(self.input_state_vars,), batch_size=self.batch_size))
+        self.model.add(self.get_activation(self.hidden_act))
+        self.model.add(Dense(64))
+        self.model.add(self.get_activation(self.hidden_act))
+        self.model.add(Dense(16))
+        self.model.add(self.get_activation(self.hidden_act))
+        self.model.add(Dense(1))
+        self.model.add(self.get_activation(self.last_act))
 
     def call(self, x):
         x = self.d1(x)
@@ -40,6 +45,9 @@ class TRModel(Model):
         print("[Info] Last Activation Function: {}".format(self.last_act))
         print("[Info] Input State Representation: size: {}, filter: {}".format(self.input_state_vars, self.state_filter))
         print()
+
+    def get_model(self):
+        return self.model
 
     def get_activation(self, name):
         if name == 'leakyrelu':
