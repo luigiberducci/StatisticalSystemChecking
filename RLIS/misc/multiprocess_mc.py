@@ -34,9 +34,11 @@ problem, n, cores = args.problem, args.n, args.cores
 nn = n // cores             # num sims for each core
 nn_last = nn + n % cores     # num sims for the last core
 
+systs = []
 processes = []
 for i in range(cores):
     sys = get_system(problem)
+    systs.append(sys)
     sims = nn
     if i == cores-1:
         sims = nn_last
@@ -49,6 +51,7 @@ for p in processes:
 # Join
 for p in processes:
     p.join()
+
 
 import ipdb
 ipdb.set_trace()

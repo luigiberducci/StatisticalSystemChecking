@@ -143,7 +143,7 @@ class RLISAgent:
                     break
                 # Run system
                 episode_counter = episode_counter + 1
-                sampled_prefix = prefix_list[id].copy()
+                sampled_prefix = prefix_list[id]
                 trace, reward, reward_arr, i_init_run, i_max_reward, error_found = self.run_system_from_prefix(sys, sampled_prefix)
                 # Store trace
                 assert id <= len(omega)  # at most is the new element to insert
@@ -235,7 +235,7 @@ class RLISAgent:
             while available_indices and step_counter<max_sim_step:
                 # Run system
                 episode_counter = episode_counter + 1
-                sampled_prefix = rand.sample(prefix_list, 1)[0].copy()  # sample return a list of 1 (k) element (avoid mem problem)
+                sampled_prefix = rand.sample(prefix_list, 1)[0]  # sample return a list of 1 (k) element (avoid mem problem)
                 trace, reward, reward_arr, i_init_run, i_max_reward, error_found = self.run_system_from_prefix(sys, sampled_prefix)
                 reward_list.append(reward)
                 # Store trace
@@ -328,7 +328,11 @@ class RLISAgent:
         return error_prob, falsification_counter, first_fals_step, step_counter, episode_counter
 
     def run_system_from_prefix(self, sys, prefix):
-        sys.set_prefix(prefix)
+        if prefix is None:
+            sys.reset_init_state()
+        else:
+            prefix = prefix.copy()
+            sys.set_prefix(prefix)
         sys.run_system()
         return sys.get_trace(), sys.reward, sys.reward_array, sys.last_init_state, sys.i_max_reward, sys.is_current_trace_false()
 
@@ -407,6 +411,8 @@ class RLISAgent:
                     `level` is the new level found (or the current one if such level doesn't exist)
         """
         np_s_omega = np.array(s_omega[:])
+        if any(np.isnan(np_s_omega)):
+            print("[Error] Found NaN in S-trace. Why? Learning rate too high?")
         filter_s_omega = np_s_omega[np.nonzero(np_s_omega > last_level + delta_level)]  # Delta>0 solves Zeno Effect
         # Note: if delta>0, go to the next level even if less than K
         if filter_s_omega.size == 0 or (filter_s_omega.size < k_best_level and delta_level == 0):  # if not found K promising traces

@@ -9,10 +9,12 @@ from RLISAgent import RLISAgent
 from model.TRModel import TRModel
 from model.EKFModel import EKFModel
 from model.SRModel import SRModel
+from model.CRModel import CRModel
 from rl.memory import SequentialMemory
 from env.EKF import EKFSystem
 from env.SR import SRSystem
 from env.TR import TRSystem
+from env.CROSS import CrossRoadEnv
 from timeit import default_timer as timer
 
 template_config = "Configuration:\n" \
@@ -39,6 +41,8 @@ def get_default_sys(problem_name):
         sys = SRSystem(p=p)
     elif problem_name == 'TR':
         sys = TRSystem()
+    elif problem_name == 'CR':
+        sys = CrossRoadEnv()
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
     return sys
@@ -53,6 +57,9 @@ def get_default_memory_configuration(problem_name):
         mem_warmup_steps = 500
     elif problem_name == 'TR':
         mem_limit = 200000
+        mem_warmup_steps = 1000
+    elif problem_name == 'CR':
+        mem_limit = 100000
         mem_warmup_steps = 1000
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
@@ -76,6 +83,9 @@ def get_default_model(problem_name, batch_size, hidden_init, hidden_activation, 
     elif problem_name == 'TR':
         model_manager = TRModel(batch_size, hidden_init, hidden_activation, out_activation)
         model = model_manager.get_model()
+    elif problem_name == 'CR':
+        model_manager = CRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model = model_manager.get_model()
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
     return model_manager, model
@@ -96,6 +106,11 @@ def get_default_training_params(problem_name):
         num_particles = 100
         k_particles = 10
         delta = 0.0
+    elif problem_name == 'CR':
+        max_sim_steps = 10000 * 152 # CR
+        num_particles = 500
+        k_particles = 10
+        delta = 0.01
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
     return max_sim_steps, num_particles, k_particles, delta
@@ -169,13 +184,13 @@ def run_default(problem_name, out_dir, render):
     mem_limit, mem_window, mem_warmup_steps = get_default_memory_configuration(problem_name)
     max_sim_steps, num_particles, k_particles, delta = get_default_training_params(problem_name)
     batch_size, hidden_init, hidden_activation, out_activation = 8, "glorot_uniform", "relu", "linear"
-    optimizer, lr, opt_params, loss = "sgd", 0.01, [], "mse"
+    optimizer, lr, opt_params, loss = "sgd", 0.0001, [], "mse"
     # Run
     run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidden_activation, out_activation,
         optimizer, lr, opt_params, loss, max_sim_steps, num_particles, k_particles, delta, enable_test_flag, out_dir, render)
 
 def main():
-    problems = ['EKF', 'SR', 'TR']
+    problems = ['EKF', 'SR', 'TR', 'CR']
     parser = argparse.ArgumentParser()
     parser.add_argument('--problem', default=["SR"], nargs=1, help='Problem name', choices=problems)
     parser.add_argument('-test', action='store_true')
@@ -195,17 +210,17 @@ def multi_test(problem_name, out_prefix="", render=False):
     num_repeat = 5
     opts = ["sgd"]
     losses = ["mse"]
-    lrs = [0.01]
-    max_steps = [1000000]
+    lrs = [0.0001]
+    max_steps = [1500000]   #CR
     #max_steps = [100000]  #SR
-    ns = [100]
+    ns = [300]
     #ns = [300]              #SR
     ks = [10]
-    deltas = [0.0]
+    deltas = [0.01]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
-    mem_limits = [50000]
+    mem_limits = [200000]
     mem_wups = [1000]
     #mem_limits = [10000]    #SR
     #mem_wups = [500]        #SR

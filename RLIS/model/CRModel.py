@@ -5,15 +5,12 @@ from tensorflow.keras import Model
 import numpy as np
 
 
-class TRModel(Model):
+class CRModel(Model):
     def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear'):
-        super(TRModel, self).__init__()
+        super(CRModel, self).__init__()
         # State representation
-        self.state_variables = 27   # x, y, theta, v, xx, yy, ttheta, vv, cov4x4flat, time, realv, realu
-        self.state_filter = [False] * self.state_variables
-        self.state_filter[0] = self.state_filter[1] = self.state_filter[2] = self.state_filter[3] = True  # x, y, theta
-        self.state_filter[4] = self.state_filter[5] = self.state_filter[6] = self.state_filter[7] = True  # x', y', theta'
-        self.state_filter[24] = self.state_filter[26] = True  # time, input u
+        self.state_variables = 13   # x, y, theta, v, xx, yy, ttheta, vv, cov4x4flat, time, realv, realu
+        self.state_filter = [True] * self.state_variables
         self.input_state_vars = np.where(self.state_filter)[0].shape[0]     # input variables (reduced)
         # Model params
         self.batch_size = batch_size
