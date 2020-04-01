@@ -25,7 +25,7 @@ template_config = "Configuration:\n" \
                   "ISplit: max sim steps: {}, particles: {}, k particles: {}\n"
 
 # ex: out/EKF/1000000/cust_pref_datetime_hidinit_gl_hidact_relu_batch_8_mem_20000_500_opt_sgd_lr_0_01_isplit_n_200_k_10/1
-out_dir_template = "out_prova/{}/{}/{}{}_rscale_{}_statevars_{}_hidinit_{}_hidact_{}_batch_{}_mem_{}_{}_opt_{}_lr_{}_isplit_n_{}_k_{}_d_{}/{}"
+out_dir_template = "out_prod/{}/{}/{}{}_rscale_{}_statevars_{}_hidinit_{}_hidact_{}_batch_{}_mem_{}_{}_opt_{}_lr_{}_isplit_n_{}_k_{}_d_{}/{}"
 
 template_training_phase = "[Info] Training phase completed in {} seconds. \n" \
                           "[Result] Num Fals: {}, Num IS iters: {}, First Fals: {}, Mean Error Probs: {}\n" \
@@ -206,16 +206,14 @@ def main():
         multi_test(problem_name, out_prefix=out_pref, render=args.render)
 
 def multi_test(problem_name, out_prefix="", render=False):
-    num_repeat = 1
+    num_repeat = 5
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
     max_steps = [100000]  #SR
-    max_steps = [1000]  #SR
-    ns = [100]
+    ns = [200, 300]
     ks = [10]
     deltas = [0.00]
-    num_input_vars = [2]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
@@ -223,8 +221,9 @@ def multi_test(problem_name, out_prefix="", render=False):
     # mem_wups = [1000]
     mem_limits = [10000]    #SR
     mem_wups = [500]        #SR
-    batch_szs = [8, 32, 64]
-    rscale_flags = [True, False]
+    num_input_vars = [2]
+    rscale_flags = [True]
+    batch_szs = [8]
 
     # default params
     enable_test_flag = False
