@@ -6,7 +6,7 @@ import numpy as np
 
 
 class EKFModel(Model):
-    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear', input_state_vars):
+    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear', input_state_vars=None):
         super(EKFModel, self).__init__()
         # State representation
         self.full_state_vars = 25   # full state variables
@@ -36,16 +36,19 @@ class EKFModel(Model):
 
     def get_state_filter(self, num_state_vars):
         state_filter = [False] * self.state_variables
-        if num_state_vars>self.state_variables or num_state_vars==0:
-            raise ValueError("num state variables {} not valid. SR has {} state variables.".format(num_state_vars,     self.state_variables))
-        elif num_state_vars == 5:
-            state_filter[0] = state_filter[1] = True        # x, y
-            state_filter[4] = state_filter[5] = True        # x', y'
-            state_filter[24] = True                         # time
-        elif num_state_vars == 7:
-            state_filter[0] = state_filter[1] = state_filter[2] = True      # x, y, theta
-            state_filter[4] = state_filter[5] = state_filter[6] = True      # x', y', theta'
-            state_filter[24] = True                                         # time
+        if num_state_vars is not None:
+            if num_state_vars>self.state_variables or num_state_vars==0:
+                raise ValueError("num state variables {} not valid. SR has {} state variables.".format(num_state_vars,     self.state_variables))
+            elif num_state_vars == 5:
+                state_filter[0] = state_filter[1] = True        # x, y
+                state_filter[4] = state_filter[5] = True        # x', y'
+                state_filter[24] = True                         # time
+            elif num_state_vars == 7:
+                state_filter[0] = state_filter[1] = state_filter[2] = True      # x, y, theta
+                state_filter[4] = state_filter[5] = state_filter[6] = True      # x', y', theta'
+                state_filter[24] = True                                         # time
+            else:
+                state_filter = [True] * self.state_variables
         else:
             state_filter = [True] * self.state_variables
         return state_filter

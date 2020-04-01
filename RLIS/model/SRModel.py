@@ -6,7 +6,7 @@ import numpy as np
 
 
 class SRModel(Model):
-    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear', input_state_vars):
+    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear', input_state_vars=None):
         super(SRModel, self).__init__()
         # State representation
         self.state_variables = 2
@@ -38,11 +38,16 @@ class SRModel(Model):
         return self.out(x)
 
     def get_state_filter(self, num_state_vars):
+        import ipdb
+        ipdb.set_trace()
         state_filter = [False] * self.state_variables
-        if num_state_vars > self.state_variables or num_state_vars == 0:
-            raise ValueError("num state variables {} not valid. SR has {} state variables.".format(num_state_vars, self.state_variables))
-        if num_state_vars is None or num_state_var==self.state_variables:
-            state_filter = [True] * self.state_variables
+        if num_state_vars is not None:
+            if num_state_vars > self.state_variables or num_state_vars == 0:
+                raise ValueError("num state variables {} not valid. SR has {} state variables.".format(num_state_vars, self.state_variables))
+            elif num_state_vars==self.state_variables:
+                state_filter = [True] * self.state_variables
+            else:
+                state_filter[:num_state_vars-1] = True
         else:
             state_filter[:num_state_vars-1] = True
         return state_filter

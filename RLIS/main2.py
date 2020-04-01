@@ -206,11 +206,12 @@ def main():
         multi_test(problem_name, out_prefix=out_pref, render=args.render)
 
 def multi_test(problem_name, out_prefix="", render=False):
-    num_repeat = 5
+    num_repeat = 1
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
     max_steps = [100000]  #SR
+    max_steps = [1000]  #SR
     ns = [100]
     ks = [10]
     deltas = [0.00]
@@ -242,8 +243,8 @@ def multi_test(problem_name, out_prefix="", render=False):
             sys.stdout = open(out_log, 'w')
             #sys.stderr = open(err_log, 'w')
             # run RLIS
-            run(problem_name, mem_lim, mem_wup, batch_sz, ninputs, hid_init, hid_act, out_act,
-                opt, lr, [], loss, max_sim_steps, num_parts, k_parts, delta, enable_test_flag, out_dir, render)
+            run(problem_name, mem_lim, mem_wup, batch_sz, hid_init, hid_act, out_act,
+                opt, lr, [], loss, max_sim_steps, num_parts, k_parts, delta, enable_test_flag, out_dir, render, ninputs)
 
 if __name__=="__main__":
     main()
