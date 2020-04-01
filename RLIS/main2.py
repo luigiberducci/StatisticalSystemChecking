@@ -240,7 +240,7 @@ def multi_test(problem_name, out_prefix="", render=False):
             # store stdout and stderr in log files
             out_log = os.path.join(out_dir, "log.txt")
             err_log = os.path.join(out_dir, "err.txt")
-            sys.stdout = open(out_log, 'w')
+            # sys.stdout = open(out_log, 'w')
             #sys.stderr = open(err_log, 'w')
             # run RLIS
             run(problem_name, mem_lim, mem_wup, batch_sz, hid_init, hid_act, out_act,

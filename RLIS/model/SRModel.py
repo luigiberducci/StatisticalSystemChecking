@@ -38,8 +38,6 @@ class SRModel(Model):
         return self.out(x)
 
     def get_state_filter(self, num_state_vars):
-        import ipdb
-        ipdb.set_trace()
         state_filter = [False] * self.state_variables
         if num_state_vars is not None:
             if num_state_vars > self.state_variables or num_state_vars == 0:
@@ -47,7 +45,7 @@ class SRModel(Model):
             elif num_state_vars==self.state_variables:
                 state_filter = [True] * self.state_variables
             else:
-                state_filter[:num_state_vars-1] = True
+                state_filter[:num_state_vars] = [True] * num_state_vars
         else:
             state_filter = [True] * self.state_variables
         return state_filter
