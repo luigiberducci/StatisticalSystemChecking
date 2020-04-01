@@ -9,6 +9,8 @@ import tensorflow as tf
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.losses import MeanSquaredError as MSE
 
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
 class RLISAgent:
     """
     Implementation of RLIS (RL+ImpSplit) agent
@@ -69,7 +71,7 @@ class RLISAgent:
         return prob, num_falsifications, step_counter
 
     def train(self, sys, max_sim_steps=10000, render=False, max_num_particles=500, min_num_particles=100, particles_inc = 50,
-              k_particles=10, exploratory_steps=10000, delta=0, weight_interval=np.Inf):
+              k_particles=10, exploratory_steps=10000, delta=0, weight_interval=np.Inf, rscale_flag=True):
         step_counter = 0
         episode_counter = 0
         falsification_counter = 0
@@ -79,8 +81,9 @@ class RLISAgent:
         # Exploratory phase (estimation of mean rob for Robustness scaling)
         # Note: since there is NO learning, I don't count these steps
         eps, delt = 0.1, 0.01   # (e,d)-approx of mean rob
-        # avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
-        # sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
+        if rscale_flag:
+            avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
+            sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
         # Training loop
         print("[Info] Train (ISplit) Configuration")
         print("[Info] Num steps: {}".format(max_sim_steps))
@@ -390,7 +393,7 @@ class RLISAgent:
         :param trace_id: identifier of the trace
         :return: QTrace and Score
         """
-        trace = tf.data.Dataset.from_tensor_slices(np.swapaxes(trace[self.model_manager.state_filter], 0, 1)).batch(self.model_manager.batch_size)
+        trace = tf.data.Dataset.from_tensor_slices(np.swapaxes(trace[self.model_manager.state_filter], 0, 1).astype(np.float32)).batch(self.model_manager.batch_size)
         for i, batch_state in enumerate(trace):
             batch_state = batch_state.numpy()
             if i == 0:

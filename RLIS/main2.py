@@ -25,7 +25,7 @@ template_config = "Configuration:\n" \
                   "ISplit: max sim steps: {}, particles: {}, k particles: {}\n"
 
 # ex: out/EKF/1000000/cust_pref_datetime_hidinit_gl_hidact_relu_batch_8_mem_20000_500_opt_sgd_lr_0_01_isplit_n_200_k_10/1
-out_dir_template = "out/{}/{}/{}{}_statevars_{}_hidinit_{}_hidact_{}_batch_{}_mem_{}_{}_opt_{}_lr_{}_isplit_n_{}_k_{}_d_{}/{}"
+out_dir_template = "out_prova/{}/{}/{}{}_rscale_{}_statevars_{}_hidinit_{}_hidact_{}_batch_{}_mem_{}_{}_opt_{}_lr_{}_isplit_n_{}_k_{}_d_{}/{}"
 
 template_training_phase = "[Info] Training phase completed in {} seconds. \n" \
                           "[Result] Num Fals: {}, Num IS iters: {}, First Fals: {}, Mean Error Probs: {}\n" \
@@ -115,7 +115,7 @@ def get_default_training_params(problem_name):
         raise ValueError("problem name {} is not defined".format(problem_name))
     return max_sim_steps, num_particles, k_particles, delta
 
-def training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta, render):
+def training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta, render, rscale_flag):
     print("[Info] Training...")
     # Exploration with linear particles decay
     min_n = num_particles
@@ -127,7 +127,7 @@ def training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta,
     error_prob_list, num_fals, first_fals_step = agent.train(sys, max_sim_steps=max_sim_steps, render=render,
                                                              max_num_particles=max_n, min_num_particles=min_n, particles_inc = inc,
                                                              k_particles=k_particles, exploratory_steps=expl_steps,
-                                                             delta=delta)
+                                                             delta=delta, rscale_flag=rscale_flag)
     elapsed_time = timer() - start_time
     # Log info
     mean_error_probs = 0 if len(error_prob_list) == 0 else sum(error_prob_list) / len(error_prob_list)
@@ -144,7 +144,7 @@ def testing_phase(sys, agent, num_particles, k_particles, delta, render):
 
 def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidden_activation,
         out_activation, optimizer, lr, opt_params, loss, max_sim_steps,
-        num_particles, k_particles, delta, enable_test_flag, out_dir, render, n_inputs=None):
+        num_particles, k_particles, delta, enable_test_flag, out_dir, render, n_inputs=None, rscale_flag=True):
     mem_window = 1  # fixed window for exp replay
     # Create out dir and subdirectories
     level_dir = os.path.join(out_dir, "levels")
@@ -171,7 +171,7 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     model_manager.print_config()
     agent.print_config()
     # Training
-    training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta=0.0, render=render)
+    training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta=0.0, render=render, rscale_flag=rscale_flag)
 
     # Testing
     if enable_test_flag:
@@ -215,7 +215,7 @@ def multi_test(problem_name, out_prefix="", render=False):
     ns = [100]
     ks = [10]
     deltas = [0.00]
-    num_input_vars = [1, 2, 3]
+    num_input_vars = [2]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
@@ -223,28 +223,30 @@ def multi_test(problem_name, out_prefix="", render=False):
     # mem_wups = [1000]
     mem_limits = [10000]    #SR
     mem_wups = [500]        #SR
-    batch_szs = [8]
+    batch_szs = [8, 32, 64]
+    rscale_flags = [True, False]
 
     # default params
     enable_test_flag = False
     # multi test for each combination of parameter lists
-    for combination in product(opts, lrs, losses, max_steps, ns, ks, deltas, num_input_vars, inits, acts, out_acts, mem_limits, mem_wups, batch_szs):
-        opt, lr, loss, max_sim_steps, num_parts, k_parts, delta, ninputs, hid_init, hid_act, out_act, mem_lim, mem_wup, batch_sz = combination
+    for combination in product(opts, lrs, losses, max_steps, ns, ks, deltas, num_input_vars, inits, acts, out_acts, mem_limits, mem_wups, batch_szs, rscale_flags):
+        opt, lr, loss, max_sim_steps, num_parts, k_parts, delta, ninputs, hid_init, hid_act, out_act, mem_lim, mem_wup, batch_sz, rscale = combination
 
         date = strftime("%Y-%m-%d_%H-%M-%S", gmtime())  # fixed for all repeatitions
         for repeat in range(num_repeat):
             # create output directory
-            out_dir = out_dir_template.format(problem_name, max_sim_steps, out_prefix, date, hid_init, ninputs, hid_act, batch_sz, mem_lim, mem_wup, opt, lr, num_parts, k_parts, delta, repeat+1)
+            out_dir = out_dir_template.format(problem_name, max_sim_steps, out_prefix, date, rscale, ninputs, hid_init, hid_act, batch_sz, mem_lim, mem_wup, opt, lr, num_parts, k_parts, delta, repeat+1)
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
             # store stdout and stderr in log files
             out_log = os.path.join(out_dir, "log.txt")
             err_log = os.path.join(out_dir, "err.txt")
-            # sys.stdout = open(out_log, 'w')
-            #sys.stderr = open(err_log, 'w')
+            sys.stdout = open(out_log, 'w')
+            sys.stderr = open(err_log, 'w')
             # run RLIS
             run(problem_name, mem_lim, mem_wup, batch_sz, hid_init, hid_act, out_act,
-                opt, lr, [], loss, max_sim_steps, num_parts, k_parts, delta, enable_test_flag, out_dir, render, ninputs)
+                opt, lr, [], loss, max_sim_steps, num_parts, k_parts, delta, enable_test_flag, out_dir, render,
+                ninputs, rscale)
 
 if __name__=="__main__":
     main()
