@@ -49,7 +49,7 @@ class SRModel(Model):
             else:
                 state_filter[:num_state_vars-1] = True
         else:
-            state_filter[:num_state_vars-1] = True
+            state_filter = [True] * self.state_variables
         return state_filter
 
     def get_model(self):
