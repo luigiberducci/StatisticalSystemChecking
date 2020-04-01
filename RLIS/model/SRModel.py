@@ -6,11 +6,11 @@ import numpy as np
 
 
 class SRModel(Model):
-    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear'):
+    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear', input_state_vars):
         super(SRModel, self).__init__()
         # State representation
         self.state_variables = 2
-        self.state_filter = [True] * self.state_variables   # consider all the state (x, t)
+        self.state_filter = self.get_state_filter(input_state_vars)
         self.input_state_vars = np.where(self.state_filter)[0].shape[0]     # consistency with other model implementations
         # Model params
         self.batch_size = batch_size
@@ -37,6 +37,16 @@ class SRModel(Model):
         x = self.d2(x)
         return self.out(x)
 
+    def get_state_filter(self, num_state_vars):
+        state_filter = [False] * self.state_variables
+        if num_state_vars > self.state_variables or num_state_vars == 0:
+            raise ValueError("num state variables {} not valid. SR has {} state variables.".format(num_state_vars, self.state_variables))
+        if num_state_vars is None or num_state_var==self.state_variables:
+            state_filter = [True] * self.state_variables
+        else:
+            state_filter[:num_state_vars-1] = True
+        return state_filter
+
     def get_model(self):
         return self.model
 
@@ -46,6 +56,7 @@ class SRModel(Model):
         print("[Info] Hidden Initializer: {}".format(self.hidden_init))
         print("[Info] Hidden Activation Function: {}".format(self.hidden_act))
         print("[Info] Last Activation Function: {}".format(self.last_act))
+        print("[Info] Input State Representation: size: {}, filter: {}".format(self.input_state_vars, self.state_filter))
         print()
 
     def get_activation(self, name):

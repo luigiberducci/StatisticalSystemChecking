@@ -6,14 +6,11 @@ import numpy as np
 
 
 class EKFModel(Model):
-    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear'):
+    def __init__(self, batch_size=32, hidden_initializer='glorot_uniform', hiddent_activation='relu', last_activation='linear', input_state_vars):
         super(EKFModel, self).__init__()
         # State representation
         self.full_state_vars = 25   # full state variables
-        self.state_filter = [False] * self.full_state_vars
-        self.state_filter[0] = self.state_filter[1] = self.state_filter[2] = True      # x, y, theta
-        self.state_filter[4] = self.state_filter[5] = self.state_filter[6] = True      # x', y', theta'
-        self.state_filter[24] = True                            # time
+        self.state_filter = self.get_state_filter(input_state_vars)
         self.input_state_vars = np.where(self.state_filter)[0].shape[0]     # input variables (reduced)
         # Model parameters
         self.batch_size = batch_size
@@ -36,6 +33,22 @@ class EKFModel(Model):
         x = self.d2(x)
         x = self.d3(x)
         return self.out(x)
+
+    def get_state_filter(self, num_state_vars):
+        state_filter = [False] * self.state_variables
+        if num_state_vars>self.state_variables or num_state_vars==0:
+            raise ValueError("num state variables {} not valid. SR has {} state variables.".format(num_state_vars,     self.state_variables))
+        elif num_state_vars == 5:
+            state_filter[0] = state_filter[1] = True        # x, y
+            state_filter[4] = state_filter[5] = True        # x', y'
+            state_filter[24] = True                         # time
+        elif num_state_vars == 7:
+            state_filter[0] = state_filter[1] = state_filter[2] = True      # x, y, theta
+            state_filter[4] = state_filter[5] = state_filter[6] = True      # x', y', theta'
+            state_filter[24] = True                                         # time
+        else:
+            state_filter = [True] * self.state_variables
+        return state_filter
 
     def get_model(self):
         return self.model

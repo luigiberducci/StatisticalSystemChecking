@@ -25,7 +25,7 @@ template_config = "Configuration:\n" \
                   "ISplit: max sim steps: {}, particles: {}, k particles: {}\n"
 
 # ex: out/EKF/1000000/cust_pref_datetime_hidinit_gl_hidact_relu_batch_8_mem_20000_500_opt_sgd_lr_0_01_isplit_n_200_k_10/1
-out_dir_template = "out/{}/{}/{}{}_hidinit_{}_hidact_{}_batch_{}_mem_{}_{}_opt_{}_lr_{}_isplit_n_{}_k_{}_d_{}/{}"
+out_dir_template = "out/{}/{}/{}{}_statevars_{}_hidinit_{}_hidact_{}_batch_{}_mem_{}_{}_opt_{}_lr_{}_isplit_n_{}_k_{}_d_{}/{}"
 
 template_training_phase = "[Info] Training phase completed in {} seconds. \n" \
                           "[Result] Num Fals: {}, Num IS iters: {}, First Fals: {}, Mean Error Probs: {}\n" \
@@ -72,19 +72,19 @@ def get_default_model_configuration():
     hidden_activation = 'leakyrelu'
     return batch_size, hidden_init, hidden_activation, out_activation
 
-def get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation):
+def get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation, ninputs):
     model_manager = None
     if problem_name == 'EKF':
-        model_manager = EKFModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = EKFModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
         model = model_manager.get_model()
     elif problem_name == 'SR':
-        model_manager = SRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = SRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
         model = model_manager.get_model()
     elif problem_name == 'TR':
-        model_manager = TRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = TRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
         model = model_manager.get_model()
     elif problem_name == 'CR':
-        model_manager = CRModel(batch_size, hidden_init, hidden_activation, out_activation)
+        model_manager = CRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
         model = model_manager.get_model()
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
@@ -144,7 +144,7 @@ def testing_phase(sys, agent, num_particles, k_particles, delta, render):
 
 def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidden_activation,
         out_activation, optimizer, lr, opt_params, loss, max_sim_steps,
-        num_particles, k_particles, delta, enable_test_flag, out_dir, render):
+        num_particles, k_particles, delta, enable_test_flag, out_dir, render, n_inputs=None):
     mem_window = 1  # fixed window for exp replay
     # Create out dir and subdirectories
     level_dir = os.path.join(out_dir, "levels")
@@ -164,9 +164,8 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     # Initialization
     sys = get_default_sys(problem_name)
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
-    model_manager, model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation)
-    agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss,
-                      level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
+    model_manager, model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation, n_inputs)
+    agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
     # Log info
     sys.print_config()
     model_manager.print_config()
@@ -210,33 +209,31 @@ def multi_test(problem_name, out_prefix="", render=False):
     num_repeat = 5
     opts = ["sgd"]
     losses = ["mse"]
-    lrs = [0.0001]
-    max_steps = [1500000]   #CR
-    #max_steps = [100000]  #SR
-    ns = [300]
-    #ns = [300]              #SR
+    lrs = [0.01]
+    max_steps = [100000]  #SR
+    ns = [100]
     ks = [10]
-    deltas = [0.01]
+    deltas = [0.00]
+    num_input_vars = [1, 2, 3]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
-    mem_limits = [200000]
-    mem_wups = [1000]
-    #mem_limits = [10000]    #SR
-    #mem_wups = [500]        #SR
-    batch_szs = [16]
+    # mem_limits = [200000]
+    # mem_wups = [1000]
+    mem_limits = [10000]    #SR
+    mem_wups = [500]        #SR
+    batch_szs = [8]
 
     # default params
     enable_test_flag = False
     # multi test for each combination of parameter lists
-    for combination in product(opts, lrs, losses, max_steps, ns, ks, deltas, inits, acts, out_acts, mem_limits, mem_wups, batch_szs):
-        opt, lr, loss, max_sim_steps, num_parts, k_parts, delta, hid_init, hid_act, out_act, mem_lim, mem_wup, batch_sz = combination
+    for combination in product(opts, lrs, losses, max_steps, ns, ks, deltas, num_input_vars, inits, acts, out_acts, mem_limits, mem_wups, batch_szs):
+        opt, lr, loss, max_sim_steps, num_parts, k_parts, delta, ninputs, hid_init, hid_act, out_act, mem_lim, mem_wup, batch_sz = combination
 
         date = strftime("%Y-%m-%d_%H-%M-%S", gmtime())  # fixed for all repeatitions
         for repeat in range(num_repeat):
             # create output directory
-            out_dir = out_dir_template.format(problem_name, max_sim_steps, out_prefix, date, hid_init, hid_act,
-                                              batch_sz, mem_lim, mem_wup, opt, lr, num_parts, k_parts, delta, repeat+1)
+            out_dir = out_dir_template.format(problem_name, max_sim_steps, out_prefix, date, hid_init, ninputs, hid_act, batch_sz, mem_lim, mem_wup, opt, lr, num_parts, k_parts, delta, repeat+1)
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
             # store stdout and stderr in log files
@@ -245,7 +242,7 @@ def multi_test(problem_name, out_prefix="", render=False):
             sys.stdout = open(out_log, 'w')
             #sys.stderr = open(err_log, 'w')
             # run RLIS
-            run(problem_name, mem_lim, mem_wup, batch_sz, hid_init, hid_act, out_act,
+            run(problem_name, mem_lim, mem_wup, batch_sz, ninputs, hid_init, hid_act, out_act,
                 opt, lr, [], loss, max_sim_steps, num_parts, k_parts, delta, enable_test_flag, out_dir, render)
 
 if __name__=="__main__":
