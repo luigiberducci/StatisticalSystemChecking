@@ -53,7 +53,6 @@ class TRModel(Model):
             state_filter = [True] * self.state_variables
         return state_filter
 
-
     def print_config(self):
         print("[Info] Model (NN) Configuration")
         print("[Info] Batch Size: {}".format(self.batch_size))

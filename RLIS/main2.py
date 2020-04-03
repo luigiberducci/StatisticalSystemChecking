@@ -211,9 +211,9 @@ def multi_test(problem_name, out_prefix="", render=False):
     losses = ["mse"]
     lrs = [0.01]
     max_steps = [1000000]
-    ns = [200]
+    ns = [100]
     ks = [10]
-    deltas = [0.00]
+    deltas = [0.01]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
@@ -221,8 +221,8 @@ def multi_test(problem_name, out_prefix="", render=False):
     # mem_wups = [1000]
     mem_limits = [200000]    #SR
     mem_wups = [1000]        #SR
-    num_input_vars = [7]
-    rscale_flags = [True]
+    num_input_vars = [27, 8, 6]
+    rscale_flags = [False]
     batch_szs = [8]
 
     # default params
