@@ -2,3 +2,5 @@
 *pycache*
 .*
 venv
+out_prod
+PythonRob*
