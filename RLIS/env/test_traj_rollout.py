@@ -5,15 +5,16 @@ from timeit import default_timer as timer
 template_run = "[system] complete run: episode: {}, end condition: {}, reward: {}"
 template_log = "[log] episode: {}/{}, collisions: {}, elapsed time: {}"
 
-sys = TR()
-# sys = EKF()
+# sys = TR()
+sys = EKF(err_threshold=0.8)
+sys.print_config()
 start = timer()
 collision_counter = 0
-num_sims = 1000
-print_interval = 1000
+num_sims = 2500000
+print_interval = 500000
 render_flag = False
 print_flag = False # disable printing (but collision and interval log)
-sum_rob = 0
+# sum_rob = 0
 for i in range(num_sims):
     sys.reset_init_state()
     sys.run_system()
@@ -28,10 +29,10 @@ for i in range(num_sims):
         sys.render("{}".format(i))
     if print_flag or i % print_interval == 0:
         elapsed_time = timer() - start
-        #print(template_log.format(i + 1, num_sims, collision_counter, elapsed_time))
-    print("Episode: {}, Rob: {}".format(i+1, sys.robustness))
-    sum_rob += sys.robustness
-avg_rob = sum_rob / num_sims
-print("Rob: sum: {}, num samples: {} -> avg rob: {}".format(sum_rob, num_sims, avg_rob))
+        print(template_log.format(i + 1, num_sims, collision_counter, elapsed_time))
+    # print("Episode: {}, Rob: {}".format(i+1, sys.robustness))
+    # sum_rob += sys.robustness
+# avg_rob = sum_rob / num_sims
+# print("Rob: sum: {}, num samples: {} -> avg rob: {}".format(sum_rob, num_sims, avg_rob))
 elapsed_time = timer() - start
 print("[Result] {} Simulations (plot={}) in {} seconds. Num collisions: {}".format(num_sims, render_flag, elapsed_time, collision_counter))
