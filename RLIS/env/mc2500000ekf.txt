@@ -1,0 +1,29 @@
+[Info] Environment: EKF Localization
+[Info] Parameters: Error Threshold 0.8, Time Horizon 10.0, Transient Time 3.0
+
+[log] episode: 1/2500000, collisions: 0, elapsed time: 0.029040225999779068
+[system] complete run: episode: 46913, end condition: COLLISION, reward: 1.0399016719103573
+[system] complete run: episode: 157949, end condition: COLLISION, reward: 1.022596619438663
+[system] complete run: episode: 434378, end condition: COLLISION, reward: 1.0020358696616936
+[log] episode: 500001/2500000, collisions: 3, elapsed time: 6706.464619322
+[system] complete run: episode: 838981, end condition: COLLISION, reward: 1.0244930538938541
+[log] episode: 1000001/2500000, collisions: 4, elapsed time: 13400.946056479002
+[system] complete run: episode: 1390395, end condition: COLLISION, reward: 1.0250009691603785
+[log] episode: 1500001/2500000, collisions: 5, elapsed time: 20057.584357764
+[system] complete run: episode: 1517359, end condition: COLLISION, reward: 1.019295299940418
+[system] complete run: episode: 1603240, end condition: COLLISION, reward: 1.0502824510436468
+[system] complete run: episode: 1658512, end condition: COLLISION, reward: 1.0067897099607914
+[system] complete run: episode: 1729356, end condition: COLLISION, reward: 1.0395975617440043
+[system] complete run: episode: 1796928, end condition: COLLISION, reward: 1.024073464485955
+[system] complete run: episode: 1815094, end condition: COLLISION, reward: 1.0422147267143145
+[system] complete run: episode: 1852863, end condition: COLLISION, reward: 1.00421273223119
+[system] complete run: episode: 1889791, end condition: COLLISION, reward: 1.0054040569940872
+[log] episode: 2000001/2500000, collisions: 13, elapsed time: 26734.775334560003
+[system] complete run: episode: 2065007, end condition: COLLISION, reward: 1.0485056118114982
+[system] complete run: episode: 2083389, end condition: COLLISION, reward: 1.0094568768049836
+[system] complete run: episode: 2093762, end condition: COLLISION, reward: 1.0478077152829626
+[system] complete run: episode: 2223246, end condition: COLLISION, reward: 1.0003508399774907
+[system] complete run: episode: 2241517, end condition: COLLISION, reward: 1.0040153734873491
+[system] complete run: episode: 2273399, end condition: COLLISION, reward: 1.0001523172790854
+[system] complete run: episode: 2439167, end condition: COLLISION, reward: 1.0004359331226298
+[Result] 2500000 Simulations (plot=False) in 33459.456367652994 seconds. Num collisions: 20
