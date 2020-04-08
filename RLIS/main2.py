@@ -268,8 +268,8 @@ def multi_test(problem_name, out_prefix="", render=False):
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
-    max_steps = [1000000]
-    ns = [200, 300]
+    max_steps = [100000]
+    ns = [100]
     ks = [10]
     deltas = [0.01]
     inits = ["glorot_uniform"]
@@ -277,11 +277,11 @@ def multi_test(problem_name, out_prefix="", render=False):
     out_acts = ["linear"]
     # mem_limits = [200000]
     # mem_wups = [1000]
-    mem_limits = [200000]    #SR
-    mem_wups = [1000]        #SR
-    num_input_vars = [8]
-    rscale_flags = [True]
-    batch_szs = [8]
+    mem_limits = [10000]    #SR
+    mem_wups = [500]        #SR
+    num_input_vars = [2]
+    rscale_flags = [False]
+    batch_szs = [32]
 
     # default params
     enable_test_flag = False
