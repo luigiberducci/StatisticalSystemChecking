@@ -17,6 +17,7 @@ from env.TR import TRSystem
 from env.CROSS import CrossRoadEnv
 from timeit import default_timer as timer
 
+# Templates
 template_config = "Configuration:\n" \
                   "Problem: {}, Params: {}\n" \
                   "Memory: limit: {}, window: {}, mem warmup steps: {}\n" \
@@ -72,23 +73,53 @@ def get_default_model_configuration():
     hidden_activation = 'leakyrelu'
     return batch_size, hidden_init, hidden_activation, out_activation
 
+def get_best_model_files(problem_name):
+    model_files = []
+    if problem_name == 'EKF':
+        directory = "out_prod/EKF/1000000/2020-04-02_19-56-15_rscale_True_statevars_7_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.0"
+        files = ["1/models/weights_1000006.h5", "2/models/weights_1000098.h5", "3/models/weights_1000018.h5", "4/models/weights_1000038.h5", "5/models/weights_1000008.h5"]
+    elif problem_name == 'SR':
+        directory = "out_prod/SR/100000/2020-04-01_16-28-46_rscale_True_statevars_2_hidinit_glorot_uniform_hidact_leakyrelu_batch_64_mem_10000_500_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.0/"
+        files = ["1/models/weights_100000.h5", "2/models/weights_100000.h5", "3/models/weights_100003.h5", "4/models/weights_100002.h5", "5/models/weights_100005.h5"]
+    elif problem_name == 'TR':
+        directory = "out_prod/TR/1000000/2020-04-05_03-56-44_rscale_True_statevars_8_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
+        files = ["1/models/weights_1000044.h5", "2/models/weights_1000009.h5", "3/models/weights_1000038.h5", "4/models/weights_1000046.h5", "5/models/weights_1000033.h5"]
+    else:
+        raise ValueError("problem name {} is not defined".format(problem_name))
+    return [os.path.join(directory, mfile) for mfile in files]
+
 def get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation, ninputs):
     model_manager = None
     if problem_name == 'EKF':
         model_manager = EKFModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
-        model = model_manager.get_model()
     elif problem_name == 'SR':
         model_manager = SRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
-        model = model_manager.get_model()
     elif problem_name == 'TR':
         model_manager = TRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
-        model = model_manager.get_model()
     elif problem_name == 'CR':
         model_manager = CRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
-        model = model_manager.get_model()
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
-    return model_manager, model
+    return model_manager, model_manager.get_model()
+
+
+def get_trained_model(problem_name, model_file, batch_size, hidden_init, hidden_activation, out_activation):
+    import tensorflow as tf
+    model_manager = None
+    if problem_name == 'EKF':
+        ninputs = 7
+        model_manager = EKFModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
+    elif problem_name == 'SR':
+        ninputs = 2
+        model_manager = SRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
+    elif problem_name == 'TR':
+        ninputs = 8
+        model_manager = TRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
+    elif problem_name == 'CR':
+        model_manager = CRModel(batch_size, hidden_init, hidden_activation, out_activation, ninputs)
+    else:
+        raise ValueError("problem name {} is not defined".format(problem_name))
+    return model_manager, tf.keras.models.load_model(model_file)
 
 def get_default_training_params(problem_name):
     if problem_name == 'EKF':
@@ -98,9 +129,9 @@ def get_default_training_params(problem_name):
         delta = 0.0
     elif problem_name == 'SR':
         max_sim_steps = 1000 * 10  # SR
-        num_particles = 100
+        num_particles = 200
         k_particles = 10
-        delta = 0.02
+        delta = 0.00
     elif problem_name == 'TR':
         max_sim_steps = 10000 * 65 # TR
         num_particles = 100
@@ -134,13 +165,23 @@ def training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta,
     print(template_training_phase.format(elapsed_time, num_fals, len(error_prob_list), first_fals_step,
                                          mean_error_probs, error_prob_list))
 
-def testing_phase(sys, agent, num_particles, k_particles, delta, render):
-    print("[Info] Testing with N={}, K={}, Delta={}.".format(num_particles, k_particles, delta))
-    start = timer()
-    error_prob, num_falsifications, _ = agent.test(sys, render=render, num_particles=num_particles,
-                                                   k_particles=k_particles, delta=delta)
-    elapsed_time = timer() - start
-    print(template_test_phase.format(elapsed_time, num_falsifications, error_prob))
+def testing_phase(sys, agent, num_particles, k_particles, delta, render, num_test=10):
+    error_prob_list, sum_num_fals = [], 0
+    print("[Info] Offline Testing with N={}, K={}, Delta={}. Num iterations={}".format(num_particles, k_particles, delta, num_test))
+    gstart = timer()
+    for test in range(num_test):
+        start = timer()
+        error_prob, num_falsifications, _ = agent.test(sys, render=render, num_particles=num_particles,
+                                                       k_particles=k_particles, delta=delta)
+        error_prob_list.append(error_prob)
+        sum_num_fals = sum_num_fals + num_falsifications
+        elapsed_time = timer() - start
+        print(template_test_phase.format(elapsed_time, num_falsifications, error_prob))
+    gelapsed = timer() - gstart
+    mean_error_probs = 0 if len(error_prob_list) == 0 else sum(error_prob_list) / len(error_prob_list)
+    print("[Info] Testing phase completed in {} seconds.".format(gelapsed))
+    print("[Result] Num Fals: {}, Num IS iters: {}, Mean Error Probs: {}".format(sum_num_fals, num_test, mean_error_probs))
+    print("[Details] Error Probs: {}".format(error_prob_list))
 
 def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidden_activation,
         out_activation, optimizer, lr, opt_params, loss, max_sim_steps,
@@ -161,24 +202,29 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
                                         optimizer, lr, opt_params, loss,
                                         max_sim_steps, num_particles, k_particles)
         f.write(config_text)
-    # Initialization
+    # Initialization sys and memory
     sys = get_default_sys(problem_name)
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
-    model_manager, model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation, n_inputs)
-    agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
-    # Log info
-    sys.print_config()
-    model_manager.print_config()
-    agent.print_config()
-    # Training
-    training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta=0.0, render=render, rscale_flag=rscale_flag)
 
-    # Testing
-    if enable_test_flag:
-        testing_phase(sys, agent, num_particles, k_particles, delta=delta, render=render)
+    if enable_test_flag:    # Testing
+        modelfiles = get_best_model_files(problem_name)
+        for mfile in modelfiles:
+            model_manager, model = get_trained_model(problem_name, mfile, batch_size, hidden_init, hidden_activation, out_activation)
+            agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
+            # Log info
+            print("[Info] Start offline testing, model: {}".format(mfile))
+            testing_phase(sys, agent, num_particles, k_particles, delta=delta, render=render, num_test=50)
+    else:                   # Training
+        model_manager, model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation, n_inputs)
+        agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
+        # Log info
+        sys.print_config()
+        model_manager.print_config()
+        agent.print_config()
+        training_phase(sys, agent, max_sim_steps, num_particles, k_particles, delta=0.0, render=render, rscale_flag=rscale_flag)
 
-def run_default(problem_name, out_dir, render):
-    enable_test_flag = False
+def run_default(problem_name, out_dir, render, offline_test=False):
+    enable_test_flag = offline_test
     # Default init
     mem_limit, mem_window, mem_warmup_steps = get_default_memory_configuration(problem_name)
     max_sim_steps, num_particles, k_particles, delta = get_default_training_params(problem_name)
@@ -193,17 +239,29 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--problem', default=["SR"], nargs=1, help='Problem name', choices=problems)
     parser.add_argument('-test', action='store_true')
+    parser.add_argument('-offline', action='store_true')
     parser.add_argument('-render', action='store_true')
     parser.add_argument('--outdir', default='out', nargs='?', help='Output directory for results')
     parser.add_argument('--outpref', default='', nargs='?', help='Output directory prefix for testing phase')
     args = parser.parse_args()
     problem_name = args.problem[0]
-    if not args.test:   # main
+    if not args.test:
         out_dir = args.outdir
-        run_default(problem_name, out_dir, args.render)
-    else:               # testing
+        run_default(problem_name, out_dir, args.render, args.offline)
+    else:                       # multi testing
         out_pref = args.outpref
         multi_test(problem_name, out_prefix=out_pref, render=args.render)
+
+def offline_test(problem_name, render=False):
+    enable_test_flag = True
+    # Default init
+    mem_limit, mem_window, mem_warmup_steps = get_default_memory_configuration(problem_name)
+    max_sim_steps, num_particles, k_particles, delta = get_default_training_params(problem_name)
+    batch_size, hidden_init, hidden_activation, out_activation = 8, "glorot_uniform", "relu", "linear"
+    optimizer, lr, opt_params, loss = "sgd", 0.001, [], "mse"
+    # Run
+    run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidden_activation, out_activation,
+        optimizer, lr, opt_params, loss, max_sim_steps, num_particles, k_particles, delta, enable_test_flag, out_dir, render)
 
 def multi_test(problem_name, out_prefix="", render=False):
     num_repeat = 5
