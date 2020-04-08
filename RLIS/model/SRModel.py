@@ -33,9 +33,9 @@ class SRModel(Model):
 
 
     def call(self, x):
-        x = self.d1(x)
-        x = self.d2(x)
-        return self.out(x)
+        # x = self.d1(x)
+        # x = self.d2(x)
+        return self.model(x)
 
     def get_state_filter(self, num_state_vars):
         state_filter = [False] * self.state_variables
