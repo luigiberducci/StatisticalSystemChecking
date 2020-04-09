@@ -146,9 +146,9 @@ def get_default_training_params(problem_name):
         delta = 0.00
     elif problem_name == 'TR':
         max_sim_steps = 10000 * 65 # TR
-        num_particles = 100
+        num_particles = 200
         k_particles = 10
-        delta = 0.0
+        delta = 0.01
     elif problem_name == 'CR':
         max_sim_steps = 10000 * 152 # CR
         num_particles = 500
@@ -219,7 +219,7 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
 
     if enable_test_flag:    # Testing
-        rscale_flag = False     # MANUALLY CHANGE THIS FLAG
+        rscale_flag = True # MANUALLY CHANGE THIS FLAG
         modelfiles = get_best_model_files(problem_name, rscale_flag)
         for mfile in modelfiles:
             model_manager, model = get_trained_model(problem_name, mfile, batch_size, hidden_init, hidden_activation, out_activation)
@@ -282,7 +282,7 @@ def multi_test(problem_name, out_prefix="", render=False):
     losses = ["mse"]
     lrs = [0.01]
     max_steps = [1000000]
-    ns = [100]
+    ns = [200]
     ks = [10]
     deltas = [0.01]
     inits = ["glorot_uniform"]

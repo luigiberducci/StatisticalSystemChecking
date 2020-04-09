@@ -5,12 +5,12 @@ import ipdb
 
 names = ["SR", "EKF"]
 fff = [ ["offline_SR.log", "offline_SR_noRScale.log"],
-        ["offline_EKF.log"] ]
+        ["offline_EKF.log", "offline_EKF_noRScale.log"] ]
 refs = [0.0000001024, 0.0000090960]
 
 for i, (name, files, ref) in enumerate(zip(names, fff, refs)):
     plt.subplot(len(fff), 1, i+1)
-    for f in files:
+    for j, f in enumerate(files):
         infos = []
         results = []
         details = []
@@ -40,8 +40,14 @@ for i, (name, files, ref) in enumerate(zip(names, fff, refs)):
         print("rel error {}".format(rel_error))
         print("prc error {}".format(prc_error))
 
+        if j==0:
+            lbl = "{} RScale Est.".format(name)
+            clr = 'r'
+        else:
+            lbl = "{} NO RScale Est.".format(name)
+            clr = 'orange'
         plt.plot(details, label="{} split estimations".format(name))
-        plt.hlines(y=details.mean(), xmin=-1, xmax=details.shape[0]+1, color='r', label="{} mean est.".format(name))
+        plt.hlines(y=details.mean(), xmin=-1, xmax=details.shape[0]+1, color=clr, label=lbl)
     plt.hlines(y=ref, xmin=-1, xmax=details.shape[0]+1, color='g', label="{} ref.".format(name))
     plt.xlabel("Importance Splitting executions")
     plt.ylabel("probability")
