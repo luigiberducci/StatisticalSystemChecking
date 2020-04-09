@@ -73,17 +73,29 @@ def get_default_model_configuration():
     hidden_activation = 'leakyrelu'
     return batch_size, hidden_init, hidden_activation, out_activation
 
-def get_best_model_files(problem_name):
+def get_best_model_files(problem_name, rob_scaling=True):
     model_files = []
     if problem_name == 'EKF':
-        directory = "out_prod/EKF/1000000/2020-04-02_19-56-15_rscale_True_statevars_7_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.0"
-        files = ["1/models/weights_1000006.h5", "2/models/weights_1000098.h5", "3/models/weights_1000018.h5", "4/models/weights_1000038.h5", "5/models/weights_1000008.h5"]
+        if rob_scaling:
+            directory = "out_prod/EKF/1000000/2020-04-02_19-56-15_rscale_True_statevars_7_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.0"
+            files = ["1/models/weights_1000006.h5", "2/models/weights_1000098.h5", "3/models/weights_1000018.h5", "4/models/weights_1000038.h5", "5/models/weights_1000008.h5"]
+        else:
+            directory = "out_prod/EKF/1000000/2020-04-08_18-43-29_rscale_False_statevars_7_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
+            files = ["1/models/weights_1000091.h5", "2/models/weights_1000056.h5", "3/models/weights_1000032.h5", "4/models/weights_1000034.h5", "5/models/weights_1000009.h5"]
     elif problem_name == 'SR':
-        directory = "out_prod/SR/100000/2020-04-01_16-28-46_rscale_True_statevars_2_hidinit_glorot_uniform_hidact_leakyrelu_batch_64_mem_10000_500_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.0/"
-        files = ["1/models/weights_100000.h5", "2/models/weights_100000.h5", "3/models/weights_100003.h5", "4/models/weights_100002.h5", "5/models/weights_100005.h5"]
+        if rob_scaling:
+            directory = "out_prod/SR/100000/2020-04-01_16-28-46_rscale_True_statevars_2_hidinit_glorot_uniform_hidact_leakyrelu_batch_64_mem_10000_500_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.0/"
+            files = ["1/models/weights_100000.h5", "2/models/weights_100000.h5", "3/models/weights_100003.h5", "4/models/weights_100002.h5", "5/models/weights_100005.h5"]
+        else:
+            directory = "out_prod/SR/100000/2020-04-08_14-36-38_rscale_False_statevars_2_hidinit_glorot_uniform_hidact_leakyrelu_batch_64_mem_10000_500_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
+            files = ["1/models/weights_100002.h5", "2/models/weights_100000.h5", "3/models/weights_100006.h5", "4/models/weights_100004.h5", "5/models/weights_100005.h5"]
     elif problem_name == 'TR':
-        directory = "out_prod/TR/1000000/2020-04-05_03-56-44_rscale_True_statevars_8_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
-        files = ["1/models/weights_1000044.h5", "2/models/weights_1000009.h5", "3/models/weights_1000038.h5", "4/models/weights_1000046.h5", "5/models/weights_1000033.h5"]
+        if rob_scaling:
+            directory = "out_prod/TR/1000000/2020-04-05_03-56-44_rscale_True_statevars_8_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
+            files = ["1/models/weights_1000044.h5", "2/models/weights_1000009.h5", "3/models/weights_1000038.h5", "4/models/weights_1000046.h5", "5/models/weights_1000033.h5"]
+        else:
+            directory = "out_prod/TR/1000000/2020-04-08_22-10-53_rscale_False_statevars_8_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
+            files = ["1/models/weights_1000056.h5", "2/models/weights_1000029.h5", "3/models/weights_1000015.h5", "4/models/weights_1000009.h5", "5/models/weights_1000007.h5"]
     else:
         raise ValueError("problem name {} is not defined".format(problem_name))
     return [os.path.join(directory, mfile) for mfile in files]
@@ -207,7 +219,8 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
 
     if enable_test_flag:    # Testing
-        modelfiles = get_best_model_files(problem_name)
+        rscale_flag = False     # MANUALLY CHANGE THIS FLAG
+        modelfiles = get_best_model_files(problem_name, rscale_flag)
         for mfile in modelfiles:
             model_manager, model = get_trained_model(problem_name, mfile, batch_size, hidden_init, hidden_activation, out_activation)
             agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
@@ -268,18 +281,18 @@ def multi_test(problem_name, out_prefix="", render=False):
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
-    max_steps = [100000]
+    max_steps = [1000000]
     ns = [100]
     ks = [10]
     deltas = [0.01]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
-    # mem_limits = [200000]
-    # mem_wups = [1000]
-    mem_limits = [10000]    #SR
-    mem_wups = [500]        #SR
-    num_input_vars = [2]
+    mem_limits = [200000]
+    mem_wups = [1000]
+    # mem_limits = [10000]    #SR
+    # mem_wups = [500]        #SR
+    num_input_vars = [8]
     rscale_flags = [False]
     batch_szs = [32]
 
