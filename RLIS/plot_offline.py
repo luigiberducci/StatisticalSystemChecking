@@ -3,13 +3,14 @@ import numpy as np
 import random
 import ipdb
 
-names = ["SR", "EKF"]
-fff = [ ["offline_SR.log", "offline_SR_noRScale.log"],
-        ["offline_EKF.log", "offline_EKF_noRScale.log"] ]
-refs = [0.0000001024, 0.0000090960]
+names = ["SR", "EKF", "TR"]
+fff = [ ["offline_SR_noRScale.log", "offline_SR_oldRScale.log", "offline_SR_newRScale.log"],
+        ["offline_EKF_noRScale.log", "offline_EKF_oldRScale.log", "offline_EKF_newRScale.log"],
+        ["offline_TR.log"] ]
+refs = [0.0000001024, 0.0000090960, 0.00001429]
 
 for i, (name, files, ref) in enumerate(zip(names, fff, refs)):
-    plt.subplot(len(fff), 1, i+1)
+    plt.subplot(len(names), 1, i+1)
     for j, f in enumerate(files):
         infos = []
         results = []
@@ -26,7 +27,7 @@ for i, (name, files, ref) in enumerate(zip(names, fff, refs)):
                     details = details + probs
 
         # plot
-        random.shuffle(details)
+        # random.shuffle(details)
         details = np.array(details)
 
         abs_error = abs(ref - details.mean())
@@ -41,15 +42,19 @@ for i, (name, files, ref) in enumerate(zip(names, fff, refs)):
         print("prc error {}".format(prc_error))
 
         if j==0:
-            lbl = "{} RScale Est.".format(name)
-            clr = 'r'
+            lbl = "{} - No RScale".format(name)
+            clr = 'blue'
+        elif j==1:
+            lbl = "{} - Same RScale".format(name)
+            clr = 'red'
         else:
-            lbl = "{} NO RScale Est.".format(name)
+            lbl = "{} - New RScale".format(name)
             clr = 'orange'
-        plt.plot(details, label="{} split estimations".format(name))
-        plt.hlines(y=details.mean(), xmin=-1, xmax=details.shape[0]+1, color=clr, label=lbl)
+        plt.plot(details, c=clr)
+        plt.hlines(y=details.mean(), xmin=-1, xmax=details.shape[0]+1, label=lbl, color=clr)
     plt.hlines(y=ref, xmin=-1, xmax=details.shape[0]+1, color='g', label="{} ref.".format(name))
     plt.xlabel("Importance Splitting executions")
     plt.ylabel("probability")
     plt.legend()
+    print()
 plt.show()

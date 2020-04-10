@@ -65,7 +65,14 @@ class RLISAgent:
         if print_info:
             print(info_template.format(step_counter, weights_filename))
 
-    def test(self, sys, render=True, num_particles=100, k_particles=10, delta=0):
+    def test(self, sys, render=True, num_particles=100, k_particles=10, delta=0, rscale_flag=True, scale_factor=1):
+        # Exploratory phase (estimation of mean rob for Robustness scaling)
+        eps, delt = 0.1, 0.01   # (e,d)-approx of mean rob
+        if rscale_flag:
+            if scale_factor == 1:
+                scale_factor = self.run_ed_rob_estimation(sys, eps, delt)
+            sys.set_rob_scaling(scale_factor)
+            print(self.template_ed_phase_end.format(scale_factor))
         prob, num_falsifications, _, step_counter, _ = self.run_importance_splitting(sys, num_particles, k_particles, delta,
                                                                                     render, learning=False)
         return prob, num_falsifications, step_counter
@@ -129,7 +136,6 @@ class RLISAgent:
             _, rob = sys.get_min_robustness()
             sum_rob += rob  # cumulative sum
         mean = sum_rob / N
-        print(self.template_ed_phase_end.format(mean))
         return mean
 
     def run_exploratory_phase(self, sys, num_particles, max_expl_step, expl_epsilon, step_counter=0, episode_counter=0,
