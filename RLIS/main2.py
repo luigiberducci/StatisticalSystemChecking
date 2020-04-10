@@ -222,7 +222,7 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
 
     if enable_test_flag:    # Testing
-        rscale_flag = True # MANUALLY CHANGE THIS FLAG
+        rscale_flag = False # MANUALLY CHANGE THIS FLAG
         modelfiles, scaling_factors = get_best_model_files(problem_name, rscale_flag)
         for mfile, scale_factor in zip(modelfiles, scaling_factors):
             model_manager, model = get_trained_model(problem_name, mfile, batch_size, hidden_init, hidden_activation, out_activation)
