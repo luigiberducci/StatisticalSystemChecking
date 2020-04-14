@@ -96,6 +96,7 @@ def get_best_model_files(problem_name, rob_scaling=True):
         if rob_scaling:
             directory = "out_prod/TR/1000000/2020-04-05_03-56-44_rscale_True_statevars_8_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
             files = ["1/models/weights_1000044.h5", "2/models/weights_1000009.h5", "3/models/weights_1000038.h5", "4/models/weights_1000046.h5", "5/models/weights_1000033.h5"]
+            scaling = [0.15789567868309373, 0.15686755578734904, 0.15668854916784367, 0.15721972332028536, 0.15912140467027291]
         else:
             directory = "out_prod/TR/1000000/2020-04-08_22-10-53_rscale_False_statevars_8_hidinit_glorot_uniform_hidact_leakyrelu_batch_32_mem_200000_1000_opt_sgd_lr_0.01_isplit_n_100_k_10_d_0.01"
             files = ["1/models/weights_1000056.h5", "2/models/weights_1000029.h5", "3/models/weights_1000015.h5", "4/models/weights_1000009.h5", "5/models/weights_1000007.h5"]
@@ -222,7 +223,7 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
 
     if enable_test_flag:    # Testing
-        rscale_flag = False # MANUALLY CHANGE THIS FLAG
+        rscale_flag = True # MANUALLY CHANGE THIS FLAG
         modelfiles, scaling_factors = get_best_model_files(problem_name, rscale_flag)
         for mfile, scale_factor in zip(modelfiles, scaling_factors):
             model_manager, model = get_trained_model(problem_name, mfile, batch_size, hidden_init, hidden_activation, out_activation)
