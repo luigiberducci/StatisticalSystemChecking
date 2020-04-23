@@ -281,23 +281,23 @@ def offline_test(problem_name, render=False):
         optimizer, lr, opt_params, loss, max_sim_steps, num_particles, k_particles, delta, enable_test_flag, out_dir, render)
 
 def multi_test(problem_name, out_prefix="", render=False):
-    num_repeat = 5
+    num_repeat = 1
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
-    max_steps = [1000000]
+    max_steps = [10000000]
     ns = [200]
     ks = [10]
     deltas = [0.01]
     inits = ["glorot_uniform"]
     acts = ["leakyrelu"]
     out_acts = ["linear"]
-    mem_limits = [200000]
+    mem_limits = [300000]
     mem_wups = [1000]
     # mem_limits = [10000]    #SR
     # mem_wups = [500]        #SR
     num_input_vars = [8]
-    rscale_flags = [False]
+    rscale_flags = [True]
     batch_szs = [32]
 
     # default params
