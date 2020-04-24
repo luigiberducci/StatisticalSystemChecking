@@ -91,6 +91,7 @@ class RLISAgent:
         if rscale_flag:
             avg_min_rob = self.run_ed_rob_estimation(sys, eps, delt)
             sys.set_rob_scaling(avg_min_rob)    # set scaling parameter, dividing by 2 means scale in [0,2]
+            print(self.template_ed_phase_end.format(avg_min_rob))
         # Training loop
         print("[Info] Train (ISplit) Configuration")
         print("[Info] Num steps: {}".format(max_sim_steps))
