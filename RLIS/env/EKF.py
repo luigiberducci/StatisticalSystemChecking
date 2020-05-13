@@ -48,6 +48,7 @@ class EKFSystem:
                                       np.zeros((4, 1)),  # x_est
                                       np.eye(4).reshape((16, 1)),  # p_est
                                       0.0])  # time
+        self.sensors_data = np.zeros((2, 1))  # data from gps
         # History
         self.hx_true = self.x_true
         self.hx_est = self.x_est
@@ -234,6 +235,7 @@ class EKFSystem:
         u = self.my_calc_input(self.time)
         x_dr = self.x_true      # to maintain previous method
         self.x_true, z, xDR, ud = self.observation(self.x_true, x_dr, u)
+        self.sensors_data = np.hstack((self.sensors_data, z))
         self.x_est, self.p_est = self.ekf_estimation(self.x_est, self.p_est, z, ud)
 
     def ekf_estimation(self, xEst, PEst, z, u):

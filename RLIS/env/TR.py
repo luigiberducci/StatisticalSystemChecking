@@ -74,6 +74,8 @@ class TRSystem:
         self.safe_margin = 0.15
 
         # State variables
+        self.hx_xpred = np.zeros((8,1))
+        self.hx_ypred = np.zeros((8,1))
         self.x_true = np.zeros((4, 1))
         self.x_est = np.zeros((4, 1))
         self.p_est = np.eye(4)
@@ -419,6 +421,8 @@ class TRSystem:
             x_pred = self.motion_model(x_pred, best_u)
             x.append(x_pred[0][0])
             y.append(x_pred[1][0])
+        self.hx_xpred = np.hstack((self.hx_xpred, np.array(x).reshape((8,1))))
+        self.hx_ypred = np.hstack((self.hx_ypred, np.array(y).reshape((8,1))))
         # plt.scatter(x, y, c='g')
         # plt.pause(0.001)
         # print("Best U: {}, Best Score: {}".format(best_u[1][0], best_score))
