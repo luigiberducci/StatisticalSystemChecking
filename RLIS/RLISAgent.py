@@ -261,6 +261,7 @@ class RLISAgent:
                 step_counter = step_counter + episode_steps  # update step counter
                 if render:
                     log_info = "Episode {}, Steps {} - Reward {}".format(episode_counter, step_counter, reward)
+                    # sys.render(title=log_info, save_fig=True)     # for gif animations
                     sys.render(title=log_info)
 
                 # Manage eventually falsification

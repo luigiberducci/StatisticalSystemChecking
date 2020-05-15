@@ -46,7 +46,7 @@ ax.set_ylabel('Y Position')
 
 # anim = animation.FuncAnimation(fig, update, frames=np.arange(1, truedata.shape[1]), interval=35)
 # anim.save('ekf_trace.gif', dpi=120, writer='imagemagick')
-# plt.show()
+plt.show()
 
 s = TR()
 s.run_system()
@@ -80,6 +80,6 @@ ax.add_artist(plt.Circle((x, y), color='g', fill=True, radius=s.goal_radius))
 ax.add_artist(plt.Circle((x, y), color='y', fill=False, radius=s.goal_radius + s.car_radius))
 
 
-anim = animation.FuncAnimation(fig, update_tr, frames=np.arange(0, truedata.shape[1]), interval=35)
-anim.save('tr_trace.gif', dpi=120, writer='imagemagick')
+# anim = animation.FuncAnimation(fig, update_tr, frames=np.arange(0, truedata.shape[1]), interval=35)
+# anim.save('tr_trace.gif', dpi=120, writer='imagemagick')
 plt.show()

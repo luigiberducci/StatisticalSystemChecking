@@ -285,11 +285,11 @@ def offline_test(problem_name, render=False):
         optimizer, lr, opt_params, loss, max_sim_steps, num_particles, k_particles, delta, enable_test_flag, out_dir, render)
 
 def multi_test(problem_name, out_prefix="", render=False):
-    num_repeat = 1
+    num_repeat = 2
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]
-    max_steps = [10000000]
+    max_steps = [5000000]
     ns = [200]
     ks = [10]
     deltas = [0.01]
