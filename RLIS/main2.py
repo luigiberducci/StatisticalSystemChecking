@@ -74,7 +74,6 @@ def get_default_model_configuration():
     return batch_size, hidden_init, hidden_activation, out_activation
 
 def get_best_model_files(problem_name, rob_scaling=True):
-    model_files = []
     scaling = [1] * 5
     if problem_name == 'EKF':
         if rob_scaling:
@@ -227,14 +226,16 @@ def run(problem_name, mem_limit, mem_warmup_steps, batch_size, hidden_init, hidd
     memory = SequentialMemory(limit=mem_limit, window_length=mem_window)
 
     if enable_test_flag:    # Testing
-        rscale_flag = True # MANUALLY CHANGE THIS FLAG
+        rscale_flag = True  # MANUALLY CHANGE THIS FLAG
         modelfiles, scaling_factors = get_best_model_files(problem_name, rscale_flag)
         for mfile, scale_factor in zip(modelfiles, scaling_factors):
             model_manager, model = get_trained_model(problem_name, mfile, batch_size, hidden_init, hidden_activation, out_activation)
             agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
             # Log info
-            print("[Info] Start offline testing, model: {}".format(mfile))
-            testing_phase(sys, agent, num_particles, k_particles, delta=delta, render=render, num_test=50, rscale_flag=rscale_flag, scale_factor=scale_factor)
+            print("[Info] Start offline testing:")
+            print("\tmodel: {}".format(mfile))
+            print("\tscaling factor: {}".format(scale_factor))
+            testing_phase(sys, agent, num_particles, k_particles, delta=delta, render=render, num_test=5, rscale_flag=rscale_flag, scale_factor=scale_factor)
     else:                   # Training
         model_manager, model = get_default_model(problem_name, batch_size, hidden_init, hidden_activation, out_activation, n_inputs)
         agent = RLISAgent(model_manager, model, memory, mem_warmup_steps, opt=optimizer, lr=lr, opt_params=opt_params, loss_name=loss, level_dir=level_dir, trace_dir=trace_dir, model_dir=model_dir)
@@ -285,7 +286,7 @@ def offline_test(problem_name, render=False):
         optimizer, lr, opt_params, loss, max_sim_steps, num_particles, k_particles, delta, enable_test_flag, out_dir, render)
 
 def multi_test(problem_name, out_prefix="", render=False):
-    num_repeat = 2
+    num_repeat = 5
     opts = ["sgd"]
     losses = ["mse"]
     lrs = [0.01]

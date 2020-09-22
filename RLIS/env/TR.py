@@ -2,7 +2,6 @@ import os
 from time import strftime, gmtime
 
 import numpy as np
-from numba import jit, jitclass
 import math
 import matplotlib.pyplot as plt
 
