@@ -156,7 +156,7 @@ def train_double_qlearning_agent(n_episodes):
     return qnet, return_list
 
 env = gym.make("CartPole-v1")
-n_episodes = 500
+n_episodes = 20000
 gamma = 1
 
 random_returns = random_agent(n_episodes)
